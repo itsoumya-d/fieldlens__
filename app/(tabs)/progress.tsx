@@ -1,3 +1,4 @@
+import React from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,9 +107,6 @@ function WeeklyChart() {
   );
 }
 
-// Need to import React for Fragment
-import React from 'react';
-
 export default function ProgressScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
@@ -199,12 +197,11 @@ export default function ProgressScreen() {
             <View
               style={{
                 flex: 1,
-                backgroundColor: '#2C2C2E',
+                backgroundColor: 'rgba(232, 113, 26, 0.08)',
                 borderRadius: 16,
                 padding: 16,
                 borderWidth: 1,
                 borderColor: 'rgba(232, 113, 26, 0.3)',
-                backgroundColor: 'rgba(232, 113, 26, 0.08)',
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>

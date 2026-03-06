@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  type ViewStyle,
 } from 'react-native';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
 import { router } from 'expo-router';
@@ -263,12 +264,12 @@ export default function CameraScreen() {
           {/* Viewfinder corners */}
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             {/* Corner brackets */}
-            {[
+            {([
               { top: '15%', left: '8%' },
               { top: '15%', right: '8%' },
               { bottom: '20%', left: '8%' },
               { bottom: '20%', right: '8%' },
-            ].map((style, i) => (
+            ] as ViewStyle[]).map((style, i) => (
               <View
                 key={i}
                 style={{

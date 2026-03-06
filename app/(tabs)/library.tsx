@@ -217,7 +217,7 @@ export default function LibraryScreen() {
                 borderRadius: 9999,
               }}
             >
-              <Text style={{ color: '#3A506B', fontSize: 11, fontWeight: '600', color: '#6A8CB0' }}>{task.category}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#6A8CB0' }}>{task.category}</Text>
             </View>
             <View
               style={{ backgroundColor: diffStyle.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9999 }}
