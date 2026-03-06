@@ -42,3 +42,21 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut();
   return { error };
 }
+
+export async function signInWithEmail(email: string, password: string) {
+  return supabase.auth.signInWithPassword({ email, password });
+}
+
+export async function signUpWithEmail(email: string, password: string, fullName?: string) {
+  return supabase.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName } },
+  });
+}
+
+export async function resetPassword(email: string) {
+  return supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: 'fieldlens://auth/reset-password',
+  });
+}
