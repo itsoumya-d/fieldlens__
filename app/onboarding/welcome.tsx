@@ -196,7 +196,7 @@ export default function WelcomeScreen() {
 
         {/* Continue button */}
         <Animated.View style={{ opacity: fadeAnim, width: '100%' }}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             onPress={handleContinue}
             style={{
               backgroundColor: '#E8711A',

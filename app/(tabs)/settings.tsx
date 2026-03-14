@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { signOut } from '@/lib/auth';
 import { useAuthStore } from '@/store/auth';
+import { isBiometricAvailable, getBiometricType, setBiometricEnabled, isBiometricEnabled } from '@/lib/biometrics';
+import { shareContent } from '@/lib/share';
+import { LanguagePicker } from '@/components/LanguagePicker';
 
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -62,7 +66,7 @@ function SettingsRow({
   showChevron?: boolean;
 }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="button"
       onPress={onPress}
       disabled={toggle || !onPress}
       style={{
@@ -116,6 +120,7 @@ function SettingsRow({
 }
 
 export default function SettingsScreen() {
+  const { t, i18n } = useTranslation();
   const { user, trade, experienceLevel, setSession, setUser, setOnboardingComplete } = useAuthStore();
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [autoDismiss, setAutoDismiss] = useState(false);
@@ -123,14 +128,37 @@ export default function SettingsScreen() {
   const [notifications, setNotifications] = useState(true);
   const [metricUnits, setMetricUnits] = useState(false);
 
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [biometricType, setBiometricTypeState] = useState<'face' | 'fingerprint' | 'none'>('none');
+
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Tradesperson';
   const email = user?.email || 'No email';
 
+  useEffect(() => {
+    async function checkBiometric() {
+      const available = await isBiometricAvailable();
+      setBiometricAvailable(available);
+      if (available) {
+        const type = await getBiometricType();
+        setBiometricTypeState(type);
+        const enabled = await isBiometricEnabled();
+        setBiometricEnabledState(enabled);
+      }
+    }
+    checkBiometric();
+  }, []);
+
+  const handleBiometricToggle = async (value: boolean) => {
+    await setBiometricEnabled(value);
+    setBiometricEnabledState(value);
+  };
+
   const handleSignOut = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('settings.signOut'), 'Are you sure you want to sign out?', [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
           await signOut();
@@ -145,12 +173,12 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Delete Account',
+      t('settings.deleteAccount'),
       'This will permanently delete your account and all data. This action cannot be undone.',
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete Account',
+          text: t('settings.deleteAccount'),
           style: 'destructive',
           onPress: () => {
             Alert.alert('Account deletion requires contacting support at support@fieldlens.app');
@@ -165,7 +193,7 @@ export default function SettingsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 }}>
-          <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800' }}>Settings</Text>
+          <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800' }}>{t('settings.title')}</Text>
         </View>
 
         {/* Profile Card */}
@@ -241,7 +269,7 @@ export default function SettingsScreen() {
 
         {/* Subscription */}
         <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             style={{
               backgroundColor: 'rgba(232, 113, 26, 0.1)',
               borderRadius: 16,
@@ -267,7 +295,7 @@ export default function SettingsScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Free Plan</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{t('settings.freePlan')}</Text>
                 <View
                   style={{
                     backgroundColor: '#3A3A3C',
@@ -276,11 +304,11 @@ export default function SettingsScreen() {
                     borderRadius: 9999,
                   }}
                 >
-                  <Text style={{ color: '#8E8E93', fontSize: 11, fontWeight: '600' }}>3 analyses/day</Text>
+                  <Text style={{ color: '#8E8E93', fontSize: 11, fontWeight: '600' }}>{t('settings.analysesPerDay')}</Text>
                 </View>
               </View>
               <Text style={{ color: '#8E8E93', fontSize: 13, marginTop: 2 }}>
-                Upgrade for unlimited AI coaching
+                {t('settings.upgradeCoaching')}
               </Text>
             </View>
             <View
@@ -291,17 +319,17 @@ export default function SettingsScreen() {
                 borderRadius: 8,
               }}
             >
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Upgrade</Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>{t('settings.upgrade')}</Text>
             </View>
           </TouchableOpacity>
         </View>
 
         {/* AI Preferences */}
-        <SettingsSection title="AI Preferences">
+        <SettingsSection title={t('settings.aiPreferences')}>
           <SettingsRow
             icon="mic"
             iconColor="#E8711A"
-            label="Voice Commands"
+            label={t('settings.voiceCommands')}
             toggle
             toggleValue={voiceEnabled}
             onToggle={setVoiceEnabled}
@@ -310,7 +338,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="timer-outline"
             iconColor="#1976D2"
-            label="Auto-Dismiss Results"
+            label={t('settings.autoDismiss')}
             toggle
             toggleValue={autoDismiss}
             onToggle={setAutoDismiss}
@@ -319,7 +347,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="repeat"
             iconColor="#2D8A4E"
-            label="Continuous Analysis Mode"
+            label={t('settings.continuousMode')}
             toggle
             toggleValue={continuousMode}
             onToggle={setContinuousMode}
@@ -328,11 +356,11 @@ export default function SettingsScreen() {
         </SettingsSection>
 
         {/* App Preferences */}
-        <SettingsSection title="App Preferences">
+        <SettingsSection title={t('settings.appPreferences')}>
           <SettingsRow
             icon="notifications"
             iconColor="#F9A825"
-            label="Push Notifications"
+            label={t('settings.pushNotifications')}
             toggle
             toggleValue={notifications}
             onToggle={setNotifications}
@@ -341,67 +369,94 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="resize"
             iconColor="#9C27B0"
-            label="Units"
-            value={metricUnits ? 'Metric' : 'Imperial'}
+            label={t('settings.units')}
+            value={metricUnits ? t('settings.metric') : t('settings.imperial')}
             onPress={() => setMetricUnits(!metricUnits)}
           />
           <SettingsRow
             icon="construct"
             iconColor="#8E8E93"
-            label="Trade"
-            value={trade ? trade.charAt(0).toUpperCase() + trade.slice(1) : 'Not set'}
+            label={t('settings.trade')}
+            value={trade ? trade.charAt(0).toUpperCase() + trade.slice(1) : t('settings.notSet')}
             onPress={() => router.push('/onboarding/trade')}
           />
+          <LanguagePicker currentLocale={i18n.language} />
         </SettingsSection>
 
+        {/* Security */}
+        {biometricAvailable && (
+          <SettingsSection title={t('settings.security')}>
+            <SettingsRow
+              icon={biometricType === 'face' ? 'scan-outline' : 'finger-print-outline'}
+              iconColor="#10B981"
+              label={biometricType === 'face' ? t('settings.faceId') : t('settings.fingerprint')}
+              toggle
+              toggleValue={biometricEnabled}
+              onToggle={handleBiometricToggle}
+              showChevron={false}
+            />
+          </SettingsSection>
+        )}
+
         {/* Account */}
-        <SettingsSection title="Account">
+        <SettingsSection title={t('settings.account')}>
           <SettingsRow
             icon="mail"
             iconColor="#1976D2"
-            label="Change Email"
-            onPress={() => Alert.alert('Change Email', 'Email changes are handled via magic link. A new link will be sent to your new address.')}
+            label={t('settings.changeEmail')}
+            onPress={() => Alert.alert(t('settings.changeEmail'), 'Email changes are handled via magic link. A new link will be sent to your new address.')}
           />
           <SettingsRow
             icon="log-out"
             iconColor="#F9A825"
-            label="Sign Out"
+            label={t('settings.signOut')}
             onPress={handleSignOut}
           />
           <SettingsRow
             icon="trash"
             iconColor="#D32F2F"
-            label="Delete Account"
+            label={t('settings.deleteAccount')}
             destructive
             onPress={handleDeleteAccount}
           />
         </SettingsSection>
 
+        {/* Referral */}
+        <SettingsSection title={t('settings.referral')}>
+          <SettingsRow
+            icon="gift-outline"
+            iconColor="#E8711A"
+            label={t('settings.referAFriend')}
+            value={t('settings.getOneFree')}
+            onPress={() => shareContent('Join me on FieldLens! Use my link for a free month: https://fieldlens.app/?ref=USER123')}
+          />
+        </SettingsSection>
+
         {/* About */}
-        <SettingsSection title="About">
+        <SettingsSection title={t('settings.about')}>
           <SettingsRow
             icon="information-circle"
             iconColor="#8E8E93"
-            label="Version"
+            label={t('settings.version')}
             value="1.0.0"
             showChevron={false}
           />
           <SettingsRow
             icon="document-text"
             iconColor="#8E8E93"
-            label="Terms of Service"
+            label={t('settings.terms')}
             onPress={() => {}}
           />
           <SettingsRow
             icon="shield-checkmark"
             iconColor="#8E8E93"
-            label="Privacy Policy"
+            label={t('settings.privacy')}
             onPress={() => {}}
           />
           <SettingsRow
             icon="star-outline"
             iconColor="#F9A825"
-            label="Rate FieldLens"
+            label={t('settings.rateApp')}
             onPress={() => {}}
           />
         </SettingsSection>

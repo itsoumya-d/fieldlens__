@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
+import { SkeletonProfile } from '@/components/SkeletonLoader';
 
 const WEEKLY_DATA = [
   { day: 'Mon', tasks: 2, height: 60 },
@@ -108,6 +109,21 @@ function WeeklyChart() {
 }
 
 export default function ProgressScreen() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
+        <SkeletonProfile />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>

@@ -60,3 +60,15 @@ export async function resetPassword(email: string) {
     redirectTo: 'fieldlens://auth/reset-password',
   });
 }
+
+export async function deleteAccount() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  // Delete all user profile data (cascade handles related tables)
+  await supabase.from('profiles').delete().eq('id', user.id);
+
+  // Sign out — full auth.users deletion is handled by a Supabase Edge Function
+  const { error } = await supabase.auth.signOut();
+  return { error };
+}

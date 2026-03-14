@@ -137,7 +137,7 @@ export default function TaskDetailScreen() {
           borderBottomColor: '#3A3A3C',
         }}
       >
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => router.back()}
           style={{
             width: 36,
@@ -161,7 +161,7 @@ export default function TaskDetailScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity onPress={() => setIsBookmarked(!isBookmarked)} style={{ padding: 8 }}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => setIsBookmarked(!isBookmarked)} style={{ padding: 8 }}>
           <Ionicons
             name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
             size={22}
@@ -192,7 +192,7 @@ export default function TaskDetailScreen() {
           const isCompleted = completedSteps.has(i);
           const isCurrent = i === currentStep;
           return (
-            <TouchableOpacity key={i} onPress={() => setCurrentStep(i)}>
+            <TouchableOpacity accessibilityRole="button" key={i} onPress={() => setCurrentStep(i)}>
               <View
                 style={{
                   width: 32,
@@ -332,7 +332,7 @@ export default function TaskDetailScreen() {
         </View>
 
         {/* Tips (expandable) */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => toggleSection('tips')}
           style={{
             backgroundColor: '#2C2C2E',
@@ -370,7 +370,7 @@ export default function TaskDetailScreen() {
         )}
 
         {/* Common Mistakes (expandable) */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => toggleSection('mistakes')}
           style={{
             backgroundColor: '#2C2C2E',
@@ -447,7 +447,7 @@ export default function TaskDetailScreen() {
         }}
       >
         {/* Previous */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => !isFirstStep && setCurrentStep((s) => s - 1)}
           disabled={isFirstStep}
           style={{
@@ -465,7 +465,7 @@ export default function TaskDetailScreen() {
         </TouchableOpacity>
 
         {/* Check My Work */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => router.push('/(tabs)/camera')}
           style={{
             flex: 1,
@@ -485,7 +485,7 @@ export default function TaskDetailScreen() {
         </TouchableOpacity>
 
         {/* Next / Complete */}
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={markStepComplete}
           style={{
             flex: 1,

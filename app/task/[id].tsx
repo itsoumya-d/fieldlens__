@@ -162,7 +162,7 @@ export default function TaskDetailScreen() {
           borderBottomColor: '#3A3A3C',
         }}
       >
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={() => router.back()}
           style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
         >
@@ -191,7 +191,7 @@ export default function TaskDetailScreen() {
             </View>
           </View>
         </View>
-        <TouchableOpacity onPress={handleStartSession}>
+        <TouchableOpacity accessibilityRole="button" onPress={handleStartSession}>
           <Ionicons name="camera" size={24} color="#E8711A" />
         </TouchableOpacity>
       </View>
@@ -227,7 +227,7 @@ export default function TaskDetailScreen() {
         }}
       >
         {TABS.map((tab) => (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             key={tab.id}
             onPress={() => setActiveTab(tab.id)}
             style={{
@@ -305,7 +305,7 @@ export default function TaskDetailScreen() {
                 const isCompleted = completedSteps.has(i);
                 const isCurrent = i === currentStep;
                 return (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button"
                     key={i}
                     onPress={() => setCurrentStep(i)}
                     style={{
@@ -393,7 +393,7 @@ export default function TaskDetailScreen() {
               )}
 
               {step.checkMyWork && (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   onPress={handleCheckMyWork}
                   style={{
                     backgroundColor: 'rgba(58, 80, 107, 0.3)',
@@ -537,7 +537,7 @@ export default function TaskDetailScreen() {
             borderTopColor: '#3A3A3C',
           }}
         >
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             onPress={handleStepComplete}
             style={{
               backgroundColor: completedSteps.has(currentStep) ? '#2D8A4E' : '#E8711A',

@@ -24,7 +24,7 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity accessibilityRole="button" onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#374151" />
         </TouchableOpacity>
         {sent ? (
@@ -32,7 +32,7 @@ export default function ForgotPasswordScreen() {
             <Ionicons name="mail" size={56} color={PRIMARY} />
             <Text style={styles.title}>Email sent!</Text>
             <Text style={styles.subtitle}>Check {email} for a password reset link.</Text>
-            <TouchableOpacity style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={() => router.replace('/auth/login')}>
+            <TouchableOpacity accessibilityRole="button" style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={() => router.replace('/auth/login')}>
               <Text style={styles.btnText}>Back to Sign In</Text>
             </TouchableOpacity>
           </View>
@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
             />
-            <TouchableOpacity style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={handleReset} disabled={loading}>
+            <TouchableOpacity accessibilityRole="button" style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={handleReset} disabled={loading}>
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Send Reset Link</Text>}
             </TouchableOpacity>
           </>

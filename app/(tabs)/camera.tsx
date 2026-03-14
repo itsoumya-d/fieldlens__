@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/app';
+import { analyzeImage } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -26,28 +28,8 @@ interface Assessment {
   message: string;
   details: string[];
   codeReference?: string;
+  recommendation?: string;
 }
-
-const MOCK_ASSESSMENTS: Assessment[] = [
-  {
-    result: 'correct',
-    message: 'Joint looks good',
-    details: ['Pipe connection appears properly sealed', 'Slope looks adequate for drainage', 'No visible gaps detected'],
-    codeReference: 'IPC 704.1',
-  },
-  {
-    result: 'warning',
-    message: 'Potential issue detected',
-    details: ['Slight misalignment at the joint', 'Consider re-checking the connection', 'Monitor for leaks after installation'],
-    codeReference: 'IPC 308.5',
-  },
-  {
-    result: 'error',
-    message: 'Error: Slope insufficient',
-    details: ['Drainage slope appears too shallow', 'Minimum 1/4 inch per foot required', 'Re-slope before proceeding'],
-    codeReference: 'IPC 704.1 — Min slope: 1/4" per foot',
-  },
-];
 
 const resultConfig = {
   correct: { color: '#2D8A4E', bgColor: 'rgba(45, 138, 78, 0.15)', icon: 'checkmark-circle' as const, label: 'Looks Good' },
@@ -100,27 +82,45 @@ export default function CameraScreen() {
       return;
     }
 
+    if (!cameraRef.current) return;
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsAnalyzing(true);
     setAssessment(null);
     setShowOverlay(false);
 
-    // Simulate AI analysis
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      // Take a real photo with base64 encoding for Vision API
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.7,
+        base64: true,
+        skipProcessing: false,
+      });
 
-    const mockResult = MOCK_ASSESSMENTS[Math.floor(Math.random() * MOCK_ASSESSMENTS.length)];
-    setAssessment(mockResult);
-    setIsAnalyzing(false);
-    setShowOverlay(true);
-    incrementAnalysis();
+      if (!photo?.base64) throw new Error('No image data captured');
 
-    // Haptic feedback based on result
-    if (mockResult.result === 'correct') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else if (mockResult.result === 'error') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } else {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Call real GPT-4o Vision analysis
+      const result = await analyzeImage(user.id, photo.base64, activeSession?.trade ?? 'general');
+
+      setAssessment(result);
+      incrementAnalysis();
+
+      if (result.result === 'correct') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else if (result.result === 'error') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      }
+    } catch (err) {
+      Alert.alert('Analysis Failed', 'Could not analyze the image. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+      setShowOverlay(true);
     }
   };
 
@@ -161,7 +161,7 @@ export default function CameraScreen() {
         <Text style={{ fontSize: 15, color: '#8E8E93', textAlign: 'center', lineHeight: 22, marginBottom: 32 }}>
           FieldLens needs camera access to analyze your work and provide AI coaching.
         </Text>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={requestPermission}
           style={{
             backgroundColor: '#E8711A',
@@ -208,7 +208,7 @@ export default function CameraScreen() {
             }}
           >
             {/* Back button */}
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button"
               onPress={() => router.back()}
               style={{
                 width: 40,
@@ -324,7 +324,7 @@ export default function CameraScreen() {
               }}
             >
               {/* Flash toggle */}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() => setFlash(flash === 'on' ? 'off' : 'on')}
                 style={{
                   width: 52,
@@ -341,7 +341,7 @@ export default function CameraScreen() {
               </TouchableOpacity>
 
               {/* Capture button */}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={handleCapture}
                 disabled={isAnalyzing}
                 style={{
@@ -368,7 +368,7 @@ export default function CameraScreen() {
               </TouchableOpacity>
 
               {/* Flip camera */}
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
                 style={{
                   width: 52,
@@ -390,7 +390,7 @@ export default function CameraScreen() {
 
       {/* Assessment Overlay */}
       {showOverlay && assessment && (
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           style={{ position: 'absolute', inset: 0 }}
           activeOpacity={1}
           onPress={handleDismiss}
@@ -497,7 +497,7 @@ export default function CameraScreen() {
                     flexDirection: 'row',
                     alignItems: 'center',
                     gap: 8,
-                    marginBottom: 20,
+                    marginBottom: 12,
                     borderWidth: 1,
                     borderColor: '#3A3A3C',
                   }}
@@ -509,9 +509,31 @@ export default function CameraScreen() {
                 </View>
               )}
 
+              {/* Recommendation */}
+              {assessment.recommendation && (
+                <View
+                  style={{
+                    backgroundColor: 'rgba(232, 113, 26, 0.1)',
+                    borderRadius: 10,
+                    padding: 12,
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    marginBottom: 20,
+                    borderWidth: 1,
+                    borderColor: 'rgba(232, 113, 26, 0.3)',
+                  }}
+                >
+                  <Ionicons name="bulb-outline" size={16} color="#E8711A" style={{ marginTop: 1 }} />
+                  <Text style={{ color: '#EBEBF5', fontSize: 13, flex: 1, lineHeight: 18 }}>
+                    {assessment.recommendation}
+                  </Text>
+                </View>
+              )}
+
               {/* Action buttons */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   onPress={handleDismiss}
                   style={{
                     flex: 1,
@@ -525,7 +547,7 @@ export default function CameraScreen() {
                 >
                   <Text style={{ color: '#EBEBF5', fontSize: 15, fontWeight: '600' }}>Dismiss</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button"
                   onPress={handleCapture}
                   style={{
                     flex: 2,

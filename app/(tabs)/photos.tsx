@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Image, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import EmptyState from '@/components/EmptyState';
+import { SkeletonCard } from '@/components/SkeletonLoader';
 
 const PHOTOS = [
   { id: '1', title: 'Foundation Inspection', date: 'Mar 5, 2026', tags: ['Foundation', 'Before'], thumbnail: null },
@@ -14,38 +16,70 @@ const PHOTOS = [
 
 export default function PhotosScreen() {
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [photos, setPhotos] = useState(PHOTOS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 650);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#0F172A' }}>
+        <ScrollView className="flex-1 px-4 pt-4">
+          <View className="flex-row flex-wrap gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0F172A' }}>
       <View style={s.header}>
         <Text style={s.title}>Photo Docs</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity onPress={() => setView('grid')} style={[s.viewBtn, view === 'grid' && s.viewActive]}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => setView('grid')} style={[s.viewBtn, view === 'grid' && s.viewActive]}>
             <Ionicons name="grid" size={18} color={view === 'grid' ? '#FFFFFF' : '#94A3B8'} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setView('list')} style={[s.viewBtn, view === 'list' && s.viewActive]}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => setView('list')} style={[s.viewBtn, view === 'list' && s.viewActive]}>
             <Ionicons name="list" size={18} color={view === 'list' ? '#FFFFFF' : '#94A3B8'} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.exportBtn}>
+          <TouchableOpacity accessibilityRole="button" style={s.exportBtn}>
             <Ionicons name="share-outline" size={18} color="#3B82F6" />
           </TouchableOpacity>
         </View>
       </View>
+      {photos.length === 0 ? (
+        <EmptyState
+          icon="camera-outline"
+          title="No photos yet"
+          description="Capture site photos to track progress"
+        />
+      ) : (
       <FlatList
-        data={PHOTOS}
+      windowSize={5}
+      initialNumToRender={10}
+      maxToRenderPerBatch={5}
+      removeClippedSubviews={true}
+      data={photos}
         keyExtractor={i => i.id}
         numColumns={view === 'grid' ? 2 : 1}
         key={view}
         contentContainerStyle={{ padding: 16, gap: 10 }}
         columnWrapperStyle={view === 'grid' ? { gap: 10 } : undefined}
         renderItem={({ item }) => view === 'grid' ? (
-          <TouchableOpacity style={s.gridCard}>
+          <TouchableOpacity accessibilityRole="button" style={s.gridCard}>
             <View style={s.gridThumb}><Ionicons name="image" size={32} color="#334155" /></View>
             <Text style={s.gridTitle} numberOfLines={1}>{item.title}</Text>
             <Text style={s.gridDate}>{item.date}</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={s.listCard}>
+          <TouchableOpacity accessibilityRole="button" style={s.listCard}>
             <View style={s.listThumb}><Ionicons name="image" size={24} color="#334155" /></View>
             <View style={{ flex: 1 }}>
               <Text style={s.gridTitle}>{item.title}</Text>
@@ -57,6 +91,7 @@ export default function PhotosScreen() {
           </TouchableOpacity>
         )}
       />
+      )}
     </SafeAreaView>
   );
 }

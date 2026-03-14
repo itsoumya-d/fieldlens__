@@ -235,7 +235,7 @@ export default function DemoScreen() {
       {/* Bottom CTAs */}
       <View className="px-6 pb-6 gap-3">
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button"
             onPress={handleGetStarted}
             style={{
               backgroundColor: '#E8711A',
@@ -259,7 +259,7 @@ export default function DemoScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        <TouchableOpacity onPress={handleSkip} style={{ alignItems: 'center', paddingVertical: 12 }}>
+        <TouchableOpacity accessibilityRole="button" onPress={handleSkip} style={{ alignItems: 'center', paddingVertical: 12 }}>
           <Text style={{ color: '#8E8E93', fontSize: 15, fontWeight: '500' }}>
             I'll explore on my own
           </Text>

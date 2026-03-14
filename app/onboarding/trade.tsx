@@ -106,7 +106,7 @@ export default function TradeScreen() {
             const isDisabled = !trade.available;
 
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={trade.id}
                 onPress={() => handleSelect(trade.id, trade.available)}
                 disabled={isDisabled}
@@ -201,7 +201,7 @@ export default function TradeScreen() {
 
       {/* Continue button */}
       <View className="px-6 pb-6">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={handleContinue}
           disabled={!selected}
           style={{

@@ -10,6 +10,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import EmptyState from '@/components/EmptyState';
 
 type Filter = 'All' | 'Rough-In' | 'Install' | 'Repair' | 'Maintenance' | 'Emergency' | 'Code';
 
@@ -146,8 +147,7 @@ export default function LibraryScreen() {
     const isBookmarked = bookmarks.has(task.id);
 
     return (
-      <TouchableOpacity
-        onPress={() => router.push(`/(tabs)/library/${task.id}` as any)}
+      <TouchableOpacity accessibilityRole="button"        onPress={() => router.push(`/(tabs)/library/${task.id}` as any)}
         style={{
           backgroundColor: '#2C2C2E',
           borderRadius: 16,
@@ -198,7 +198,7 @@ export default function LibraryScreen() {
             >
               {task.title}
             </Text>
-            <TouchableOpacity onPress={() => toggleBookmark(task.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => toggleBookmark(task.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons
                 name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
                 size={18}
@@ -280,7 +280,7 @@ export default function LibraryScreen() {
             style={{ flex: 1, paddingVertical: 12, fontSize: 15, color: '#FFFFFF' }}
           />
           {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch('')}>
+            <TouchableOpacity accessibilityRole="button" onPress={() => setSearch('')}>
               <Ionicons name="close-circle" size={18} color="#8E8E93" />
             </TouchableOpacity>
           )}
@@ -295,8 +295,7 @@ export default function LibraryScreen() {
         contentContainerStyle={{ paddingHorizontal: 20, gap: 8, alignItems: 'center' }}
       >
         {FILTERS.map((filter) => (
-          <TouchableOpacity
-            key={filter}
+          <TouchableOpacity accessibilityRole="button"            key={filter}
             onPress={() => setActiveFilter(filter)}
             style={{
               paddingHorizontal: 16,
@@ -330,36 +329,20 @@ export default function LibraryScreen() {
 
       {/* Task list */}
       {filteredTasks.length === 0 ? (
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
-          <View
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: '#2C2C2E',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: 16,
-            }}
-          >
-            <Ionicons name="search" size={40} color="#636366" />
-          </View>
-          <Text style={{ fontSize: 18, color: '#FFFFFF', fontWeight: '700', marginBottom: 8, textAlign: 'center' }}>
-            No tasks found
-          </Text>
-          <Text style={{ fontSize: 14, color: '#8E8E93', textAlign: 'center', lineHeight: 20 }}>
-            Try adjusting your search or filter to find what you're looking for.
-          </Text>
-          <TouchableOpacity
-            onPress={() => { setSearch(''); setActiveFilter('All'); }}
-            style={{ marginTop: 20 }}
-          >
-            <Text style={{ color: '#E8711A', fontSize: 15, fontWeight: '600' }}>Clear Filters</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          icon="list-outline"
+          title="Library empty"
+          description="Your completed tasks will appear here"
+          actionLabel="Clear Filters"
+          onAction={() => { setSearch(''); setActiveFilter('All'); }}
+        />
       ) : (
         <FlatList
-          data={filteredTasks}
+      windowSize={5}
+      initialNumToRender={10}
+      maxToRenderPerBatch={5}
+      removeClippedSubviews={true}
+      data={filteredTasks}
           renderItem={renderTask}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}

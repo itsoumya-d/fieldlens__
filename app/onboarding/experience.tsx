@@ -94,7 +94,7 @@ export default function ExperienceScreen() {
             const isSelected = selected === level.id;
 
             return (
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button"
                 key={level.id}
                 onPress={() => setSelected(level.id)}
                 style={{
@@ -189,7 +189,7 @@ export default function ExperienceScreen() {
 
       {/* Continue button */}
       <View className="px-6 pb-6 pt-4">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button"
           onPress={handleContinue}
           disabled={!selected}
           style={{

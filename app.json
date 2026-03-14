@@ -6,7 +6,7 @@
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "fieldlens",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -17,16 +17,38 @@
       "bundleIdentifier": "com.fieldlens.app",
       "infoPlist": {
         "NSCameraUsageDescription": "FieldLens uses your camera to analyze your work and provide AI coaching.",
-        "NSMicrophoneUsageDescription": "FieldLens uses your microphone for voice commands during AI coaching."
-      }
+        "NSMicrophoneUsageDescription": "FieldLens uses your microphone for voice commands during AI coaching.",
+        "NSFaceIDUsageDescription": "Use Face ID to quickly and securely sign in to your account."
+      },
+      "buildNumber": "1",
+      "associatedDomains": ["applinks:fieldlens.app"]
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#1C1C1E"
       },
-      "permissions": ["android.permission.CAMERA", "android.permission.RECORD_AUDIO"],
-      "package": "com.fieldlens.app"
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
+      ],
+      "package": "com.fieldlens.app",
+      "versionCode": 1,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "fieldlens.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,12 +58,15 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-local-authentication",
       [
         "expo-camera",
         {
           "cameraPermission": "Allow FieldLens to access your camera for AI coaching."
         }
-      ]
+      ],
+      "expo-notifications",
+      "@sentry/react-native/expo"
     ],
     "jsEngine": "hermes",
     "experiments": {
