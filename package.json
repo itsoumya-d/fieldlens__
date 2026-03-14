@@ -31,7 +31,7 @@
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.0",
     "zustand": "^5.0.0",
-    "@expo/vector-icons": "^14.0.0",
+    "@expo/vector-icons": "^15.1.1",
     "react-native-svg": "15.11.2",
     "expo-local-authentication": "~15.0.0",
     "expo-store-review": "~7.0.0",
