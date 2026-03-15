@@ -110,6 +110,19 @@ export default function CameraScreen() {
       const result = await analyzeImage(user.id, photo.base64, activeSession?.trade ?? 'general');
 
       setAssessment(result);
+
+      // Persist result to ai_analyses (fire-and-forget)
+      supabase.from('ai_analyses').insert({
+        user_id: user.id,
+        session_id: activeSession?.id ?? null,
+        trade: activeSession?.trade ?? 'general',
+        result: result.result,
+        message: result.message,
+        details: result.details,
+        code_reference: result.codeReference ?? null,
+        recommendation: result.recommendation ?? null,
+      }).then(() => {}).catch(() => {});
+
       incrementAnalysis();
       triggerReview();
 
