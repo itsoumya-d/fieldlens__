@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 
 const PRIMARY = '#15803D';
 const PRIMARY_BG = '#DCFCE7';
@@ -39,6 +40,7 @@ const FEATURES = [
 ];
 
 export default function PaywallScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState('annual');
   const [loading, setLoading] = useState(false);
@@ -78,8 +80,8 @@ export default function PaywallScreen() {
             <View style={[s.iconWrap, { backgroundColor: PRIMARY_BG }]}>
               <Ionicons name="camera" size={34} color={PRIMARY} />
             </View>
-            <Text style={s.headline}>Your AI Field Assistant</Text>
-            <Text style={s.subhead}>Hands-free AI guidance, trade guides, and job documentation.</Text>
+            <Text style={s.headline}>{t('paywall.headline')}</Text>
+            <Text style={s.subhead}>{t('paywall.subhead')}</Text>
           </View>
 
           <View style={s.socialBar}>
@@ -140,7 +142,7 @@ export default function PaywallScreen() {
           {selectedPlan === 'annual' && (
             <View style={s.trialNote}>
               <Ionicons name="gift-outline" size={16} color="#059669" />
-              <Text style={s.trialText}>First 7 days free — cancel anytime before trial ends</Text>
+              <Text style={s.trialText}>{t('paywall.trialNote')}</Text>
             </View>
           )}
 
@@ -152,12 +154,12 @@ export default function PaywallScreen() {
                 style={[s.ctaBtn, { backgroundColor: PRIMARY }]}
               >
                 <Text style={s.ctaBtnText}>
-                  {loading ? 'Processing...' : selectedPlan === 'annual' ? '🎁  Start Free Trial' : '  Subscribe Now'}
+                  {loading ? t('auth.processing') : selectedPlan === 'annual' ? `🎁  ${t('paywall.startTrial')}` : `  ${t('paywall.subscribeNow')}`}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
             <TouchableOpacity onPress={() => router.replace('/(tabs)/')} style={s.skipBtn}>
-              <Text style={s.skipText}>Maybe later</Text>
+              <Text style={s.skipText}>{t('paywall.maybeLater')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.restoreBtn}>
               <Text style={s.restoreText}>Restore Purchases</Text>

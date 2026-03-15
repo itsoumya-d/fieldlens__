@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
@@ -66,6 +67,7 @@ const slides: Slide[] = [
 ];
 
 export default function Onboarding() {
+  const { t } = useTranslation();
   const [current, setCurrent] = useState(0);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -140,7 +142,7 @@ export default function Onboarding() {
       </View>
       {!isLast && (
         <Pressable style={styles.skipBtn} onPress={handleSkip}>
-          <Text style={styles.skipText}>Skip</Text>
+          <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
         </Pressable>
       )}
       <Animated.View
@@ -224,12 +226,12 @@ export default function Onboarding() {
           }
         >
           <Text style={[styles.buttonText, isLast && canProceed && { color: slide.bg }]}>
-            {isLast ? '🚀  Get Started' : 'Continue →'}
+            {isLast ? `🚀  ${t('onboarding.getStarted')}` : `${t('onboarding.continue')} \u2192`}
           </Text>
         </Pressable>
       </Animated.View>
       <Text style={styles.stepCounter}>
-        {current + 1} of {slides.length}
+        {t('onboarding.stepOf', { current: current + 1, total: slides.length })}
       </Text>
     </View>
   );
