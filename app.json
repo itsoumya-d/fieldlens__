@@ -21,7 +21,9 @@
         "NSFaceIDUsageDescription": "Use Face ID to quickly and securely sign in to your account."
       },
       "buildNumber": "1",
-      "associatedDomains": ["applinks:fieldlens.app"]
+      "associatedDomains": [
+        "applinks:fieldlens.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -46,7 +48,10 @@
               "pathPrefix": "/"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -66,7 +71,8 @@
         }
       ],
       "expo-notifications",
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+      "./plugins/withWidget"
     ],
     "jsEngine": "hermes",
     "experiments": {
