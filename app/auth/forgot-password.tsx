@@ -4,10 +4,12 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { resetPassword } from '@/lib/auth';
+import { useTranslation } from 'react-i18next';
 
 const PRIMARY = '#EA580C';
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -30,16 +32,16 @@ export default function ForgotPasswordScreen() {
         {sent ? (
           <View style={styles.center}>
             <Ionicons name="mail" size={56} color={PRIMARY} />
-            <Text style={styles.title}>Email sent!</Text>
-            <Text style={styles.subtitle}>Check {email} for a password reset link.</Text>
+            <Text style={styles.title}>{t('auth.emailSent')}</Text>
+            <Text style={styles.subtitle}>{t('auth.checkEmailReset', { email })}</Text>
             <TouchableOpacity accessibilityRole="button" style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={() => router.replace('/auth/login')}>
-              <Text style={styles.btnText}>Back to Sign In</Text>
+              <Text style={styles.btnText}>{t('auth.backToSignIn')}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={styles.title}>Forgot Password?</Text>
-            <Text style={styles.subtitle}>Enter your email and we will send you a reset link.</Text>
+            <Text style={styles.title}>{t('auth.forgotPasswordTitle')}</Text>
+            <Text style={styles.subtitle}>{t('auth.forgotPasswordSub')}</Text>
             <TextInput
               style={styles.input}
               placeholder="Email address"

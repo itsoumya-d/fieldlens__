@@ -133,11 +133,11 @@ export default function SignupScreen() {
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.signUp')}</Text>}
           </TouchableOpacity>
 
-          <Text style={styles.terms}>By creating an account you agree to our Terms of Service and Privacy Policy.</Text>
+          <Text style={styles.terms}>{t('auth.agreeToTerms')}</Text>
 
           <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Already have an account? </Text>
-            <Link href="/auth/login" asChild><TouchableOpacity><Text style={[styles.loginLink, { color: PRIMARY }]}>Sign In</Text></TouchableOpacity></Link>
+            <Text style={styles.loginText}>{t('auth.alreadyHaveAccount')}</Text>
+            <Link href="/auth/login" asChild><TouchableOpacity><Text style={[styles.loginLink, { color: PRIMARY }]}>{t('auth.signIn')}</Text></TouchableOpacity></Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
