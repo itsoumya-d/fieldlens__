@@ -52,7 +52,7 @@ export default function ForgotPasswordScreen() {
               autoCapitalize="none"
             />
             <TouchableOpacity accessibilityRole="button" style={[styles.btn, { backgroundColor: PRIMARY }]} onPress={handleReset} disabled={loading}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Send Reset Link</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{t('auth.sendResetLink')}</Text>}
             </TouchableOpacity>
           </>
         )}
