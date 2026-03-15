@@ -162,10 +162,10 @@ export default function PaywallScreen() {
               <Text style={s.skipText}>{t('paywall.maybeLater')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.restoreBtn}>
-              <Text style={s.restoreText}>Restore Purchases</Text>
+              <Text style={s.restoreText}>{t('paywall.restore')}</Text>
             </TouchableOpacity>
             <Text style={s.legalText}>
-              Cancel anytime. Payment charged to Apple ID / Google Play. Auto-renews unless cancelled 24h before period ends.
+              {t('paywall.legalText')}
             </Text>
           </View>
         </ScrollView>
