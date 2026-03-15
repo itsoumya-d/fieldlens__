@@ -10,6 +10,8 @@ import { isBiometricAvailable, getBiometricType, setBiometricEnabled, isBiometri
 import { shareContent } from '@/lib/share';
 import { LanguagePicker } from '@/components/LanguagePicker';
 
+import { NotificationPreferences } from '@/components/NotificationPreferences';
+
 function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={{ marginBottom: 24 }}>
@@ -123,6 +125,8 @@ export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { user, trade, experienceLevel, setSession, setUser, setOnboardingComplete } = useAuthStore();
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [autoDismiss, setAutoDismiss] = useState(false);
   const [continuousMode, setContinuousMode] = useState(false);
   const [notifications, setNotifications] = useState(true);
@@ -461,6 +465,8 @@ export default function SettingsScreen() {
           />
         </SettingsSection>
       </ScrollView>
-    </SafeAreaView>
+    
+      <NotificationPreferences visible={showNotifPrefs} onClose={() => setShowNotifPrefs(false)} />
+      </SafeAreaView>
   );
 }
