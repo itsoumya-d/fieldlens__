@@ -9,11 +9,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { signUpWithEmail, signInWithGoogle, signInWithApple } from '@/lib/auth';
+import { useTranslation } from 'react-i18next';
 
 const PRIMARY = '#EA580C';
 const APP_NAME = 'FieldLens';
 
 export default function SignupScreen() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -97,20 +99,20 @@ export default function SignupScreen() {
             <Ionicons name="flash" size={32} color="#fff" />
           </Animated.View>
 
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Join {APP_NAME} today</Text>
+          <Text style={styles.title}>{t('auth.signUp')}</Text>
+          <Text style={styles.subtitle}>{t('auth.join', { app: APP_NAME })}</Text>
 
           <TouchableOpacity accessibilityRole="button" style={[styles.appleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleApple} disabled={socialDisabled}>
             {appleLoading ? <ActivityIndicator color="#000" /> : <Ionicons name="logo-apple" size={20} color="#000" />}
-            <Text style={styles.appleBtnText}>{appleLoading ? 'Signing up...' : 'Sign up with Apple'}</Text>
+            <Text style={styles.appleBtnText}>{appleLoading ? t('auth.signingUp') : t('auth.signUpWithApple')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity accessibilityRole="button" style={[styles.googleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialDisabled}>
             {googleLoading ? <ActivityIndicator color={PRIMARY} /> : <Text style={styles.googleIcon}>G</Text>}
-            <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{googleLoading ? 'Signing up...' : 'Sign up with Google'}</Text>
+            <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{googleLoading ? t('auth.signingUp') : t('auth.signUpWithGoogle')}</Text>
           </TouchableOpacity>
 
-          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>or sign up with email</Text><View style={styles.dividerLine} /></View>
+          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.orSignUpWithEmail')}</Text><View style={styles.dividerLine} /></View>
 
           <TextInput style={styles.input} placeholder="Full name" placeholderTextColor="#9CA3AF" value={name} onChangeText={v => { setName(v); setError(''); }} autoCapitalize="words" />
           <TextInput style={styles.input} placeholder="Email address" placeholderTextColor="#9CA3AF" value={email} onChangeText={v => { setEmail(v); setError(''); }} keyboardType="email-address" autoCapitalize="none" />
@@ -128,7 +130,7 @@ export default function SignupScreen() {
           </Animated.View>
 
           <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }, loading && { opacity: 0.7 }]} onPress={handleSignUp} disabled={loading}>
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Create Account</Text>}
+            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.signUp')}</Text>}
           </TouchableOpacity>
 
           <Text style={styles.terms}>By creating an account you agree to our Terms of Service and Privacy Policy.</Text>

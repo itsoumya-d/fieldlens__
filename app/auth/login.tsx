@@ -11,11 +11,13 @@ import * as Haptics from 'expo-haptics';
 import { signInWithGoogle, signInWithMagicLink, signInWithEmail } from '@/lib/auth';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 const PRIMARY = '#EA580C';
 const APP_NAME = 'FieldLens';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'password' | 'magic'>('password');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -138,7 +140,7 @@ export default function LoginScreen() {
               <Ionicons name="flash" size={32} color="#fff" />
             </Animated.View>
             <Text style={styles.title}>{APP_NAME}</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.subtitle}>{t('auth.signInToAccount')}</Text>
           </View>
 
           {Platform.OS === 'ios' && (
@@ -153,17 +155,17 @@ export default function LoginScreen() {
 
           <TouchableOpacity accessibilityRole="button" style={[styles.googleBtn, socialLoading !== null && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialLoading !== null}>
             {socialLoading === 'google' ? <ActivityIndicator color={PRIMARY} /> : <Text style={styles.googleIcon}>G</Text>}
-            <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{socialLoading === 'google' ? 'Signing in...' : 'Continue with Google'}</Text>
+            <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{socialLoading === 'google' ? t('auth.signingIn') : t('auth.continueWithGoogle')}</Text>
           </TouchableOpacity>
 
-          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>or</Text><View style={styles.dividerLine} /></View>
+          <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.or')}</Text><View style={styles.dividerLine} /></View>
 
           <View style={styles.tabRow}>
             <TouchableOpacity accessibilityRole="button" style={[styles.tabBtn, tab === 'password' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('password'); setError(''); }}>
-              <Text style={[styles.tabText, tab === 'password' && { color: PRIMARY }]}>Password</Text>
+              <Text style={[styles.tabText, tab === 'password' && { color: PRIMARY }]}>{t('auth.password')}</Text>
             </TouchableOpacity>
             <TouchableOpacity accessibilityRole="button" style={[styles.tabBtn, tab === 'magic' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('magic'); setError(''); }}>
-              <Text style={[styles.tabText, tab === 'magic' && { color: PRIMARY }]}>Magic Link</Text>
+              <Text style={[styles.tabText, tab === 'magic' && { color: PRIMARY }]}>{t('auth.magicLink')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -181,19 +183,19 @@ export default function LoginScreen() {
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </Animated.View>
               <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/auth/forgot-password')} style={styles.forgotRow}>
-                <Text style={[styles.forgotText, { color: PRIMARY }]}>Forgot password?</Text>
+                <Text style={[styles.forgotText, { color: PRIMARY }]}>{t('auth.forgotPassword')}</Text>
               </TouchableOpacity>
               <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleSignIn} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Sign In</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.signIn')}</Text>}
               </TouchableOpacity>
             </>
           ) : magicSent ? (
             <View style={styles.magicSentBox}>
               <Ionicons name="mail" size={40} color={PRIMARY} />
-              <Text style={styles.magicSentTitle}>Check your email</Text>
-              <Text style={styles.magicSentText}>We sent a magic link to {email}</Text>
+              <Text style={styles.magicSentTitle}>{t('auth.checkYourEmail')}</Text>
+              <Text style={styles.magicSentText}>{t('auth.magicLinkSent', { email })}</Text>
               <TouchableOpacity accessibilityRole="button" style={[styles.resendBtn, resendCountdown > 0 && { opacity: 0.5 }]} onPress={resendCountdown === 0 ? handleResendMagicLink : undefined} disabled={resendCountdown > 0 || loading}>
-                <Text style={[styles.resendBtnText, { color: PRIMARY }]}>{resendCountdown > 0 ? `Resend link in ${resendCountdown}s` : 'Resend now'}</Text>
+                <Text style={[styles.resendBtnText, { color: PRIMARY }]}>{resendCountdown > 0 ? t('auth.resendIn', { count: resendCountdown }) : t('auth.resendNow')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -202,14 +204,14 @@ export default function LoginScreen() {
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </Animated.View>
               <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleMagicLink} disabled={loading}>
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Send Magic Link</Text>}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.sendMagicLink')}</Text>}
               </TouchableOpacity>
             </>
           )}
 
           <View style={styles.signupRow}>
-            <Text style={styles.signupText}>Don't have an account? </Text>
-            <Link href="/auth/signup" asChild><TouchableOpacity><Text style={[styles.signupLink, { color: PRIMARY }]}>Sign Up</Text></TouchableOpacity></Link>
+            <Text style={styles.signupText}>{t('auth.dontHaveAccount')}</Text>
+            <Link href="/auth/signup" asChild><TouchableOpacity><Text style={[styles.signupLink, { color: PRIMARY }]}>{t('auth.signUp')}</Text></TouchableOpacity></Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
