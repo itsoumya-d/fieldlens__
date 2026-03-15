@@ -22,7 +22,8 @@
       },
       "buildNumber": "1",
       "associatedDomains": [
-        "applinks:fieldlens.app"
+        "applinks:fieldlens.app",
+        "webcredentials:fieldlens.app"
       ]
     },
     "android": {

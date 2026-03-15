@@ -126,11 +126,15 @@ export default function RootLayout() {
     }
   }, [notificationResponse]);
 
+
   useEffect(() => {
-    // Handle deep links when app is already open
+    // Handle deep links when app is already open (foreground)
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('Deep link received:', url);
-      // expo-router handles the actual navigation automatically
+      handleDeepLink(url);
+    });
+    // Handle the initial URL that launched the app (cold start)
+    Linking.getInitialURL().then(url => {
+      if (url) handleDeepLink(url);
     });
     return () => subscription.remove();
   }, []);
@@ -160,6 +164,58 @@ export default function RootLayout() {
         </View>
       </View>
     );
+  }
+
+  // Handle Universal Links, App Links, and custom scheme deep links.
+  // Called both on cold start (getInitialURL) and when app is in foreground.
+  function handleDeepLink(url: string) {
+    if (!url) return;
+    try {
+      const parsed = new URL(url);
+      const pathname = parsed.pathname;
+      const params = Object.fromEntries(parsed.searchParams.entries());
+
+      // Auth callback from Supabase OAuth / magic link / password reset
+      if (pathname.includes('/auth/callback') || pathname.includes('/auth/confirm')) {
+        const token = params.token_hash || params.token;
+        const type = params.type;
+        if (type === 'recovery') {
+          router.replace({ pathname: '/(auth)/reset-password' as any, params: { token } });
+        } else if (type === 'signup' || type === 'magiclink') {
+          router.replace('/(tabs)/' as any);
+        } else {
+          router.replace('/(tabs)/' as any);
+        }
+        return;
+      }
+
+      // Reset password link
+      if (pathname.includes('/reset-password')) {
+        router.replace({ pathname: '/(auth)/reset-password' as any, params });
+        return;
+      }
+
+      // Notification tap deep links: /link/[screen]
+      if (pathname.startsWith('/link/')) {
+        const screen = pathname.replace('/link/', '');
+        if (screen) router.push(('/' + screen) as any);
+        return;
+      }
+
+      // Shared content: /shared/[type]/[id]
+      if (pathname.startsWith('/shared/')) {
+        router.push(pathname as any);
+        return;
+      }
+
+      // Custom scheme: appname://screen/[params]
+      if (url.startsWith(parsed.protocol) && !url.startsWith('http')) {
+        const path = pathname.startsWith('/') ? pathname : '/' + pathname;
+        if (path && path !== '/') router.push(path as any);
+      }
+    } catch {
+      // Malformed URL — ignore
+    }
   }
 
   return (
