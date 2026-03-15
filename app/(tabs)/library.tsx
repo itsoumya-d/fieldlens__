@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import EmptyState from '@/components/EmptyState';
+import { useTranslation } from 'react-i18next';
 
 type Filter = 'All' | 'Rough-In' | 'Install' | 'Repair' | 'Maintenance' | 'Emergency' | 'Code';
 
@@ -120,6 +121,7 @@ const difficultyColors = {
 };
 
 export default function LibraryScreen() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
@@ -236,12 +238,12 @@ export default function LibraryScreen() {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Ionicons name="list-outline" size={12} color="#636366" />
-              <Text style={{ color: '#636366', fontSize: 12 }}>{task.stepCount} steps</Text>
+              <Text style={{ color: '#636366', fontSize: 12 }}>{task.stepCount} {t('library.steps')}</Text>
             </View>
             {task.isPremium && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Ionicons name="lock-closed" size={12} color="#E8711A" />
-                <Text style={{ color: '#E8711A', fontSize: 12, fontWeight: '600' }}>Pro</Text>
+                <Text style={{ color: '#E8711A', fontSize: 12, fontWeight: '600' }}>{t('library.pro')}</Text>
               </View>
             )}
           </View>
@@ -255,7 +257,7 @@ export default function LibraryScreen() {
       {/* Header */}
       <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800', marginBottom: 16 }}>
-          Task Library
+          {t('library.title')}
         </Text>
 
         {/* Search bar */}
@@ -275,7 +277,7 @@ export default function LibraryScreen() {
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search tasks..."
+            placeholder={t('library.searchTasks')}
             placeholderTextColor="#636366"
             style={{ flex: 1, paddingVertical: 12, fontSize: 15, color: '#FFFFFF' }}
           />
@@ -322,8 +324,8 @@ export default function LibraryScreen() {
       {/* Results count */}
       <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
         <Text style={{ color: '#636366', fontSize: 13 }}>
-          {filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
-          {activeFilter !== 'All' ? ` in ${activeFilter}` : ''}
+          {filteredTasks.length === 1 ? t('library.taskCount', { count: filteredTasks.length }) : t('library.tasksCount', { count: filteredTasks.length })}
+          {activeFilter !== 'All' ? ` ${t('library.inCategory', { category: activeFilter })}` : ''}
         </Text>
       </View>
 
@@ -331,9 +333,9 @@ export default function LibraryScreen() {
       {filteredTasks.length === 0 ? (
         <EmptyState
           icon="list-outline"
-          title="Library empty"
-          description="Your completed tasks will appear here"
-          actionLabel="Clear Filters"
+          title={t('library.libraryEmpty')}
+          description={t('library.completedTasksAppear')}
+          actionLabel={t('library.clearFilters')}
           onAction={() => { setSearch(''); setActiveFilter('All'); }}
         />
       ) : (

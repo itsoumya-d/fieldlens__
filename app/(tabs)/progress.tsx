@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Rect, Text as SvgText } from 'react-native-svg';
 import { SkeletonProfile } from '@/components/SkeletonLoader';
+import { useTranslation } from 'react-i18next';
 
 const WEEKLY_DATA = [
   { day: 'Mon', tasks: 2, height: 60 },
@@ -109,6 +110,7 @@ function WeeklyChart() {
 }
 
 export default function ProgressScreen() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -129,7 +131,7 @@ export default function ProgressScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 }}>
-          <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800' }}>My Progress</Text>
+          <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800' }}>{t('progress.title')}</Text>
           <Text style={{ fontSize: 14, color: '#8E8E93', marginTop: 4 }}>
             Week of March 3 – 9, 2026
           </Text>
@@ -151,13 +153,13 @@ export default function ProgressScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Tasks Done
+                  {t('progress.tasksDone')}
                 </Text>
                 <Ionicons name="checkmark-circle" size={18} color="#2D8A4E" />
               </View>
               <Text style={{ fontSize: 36, color: '#FFFFFF', fontWeight: '800' }}>12</Text>
               <Text style={{ fontSize: 12, color: '#2D8A4E', marginTop: 4, fontWeight: '600' }}>
-                +3 this week
+                {t('progress.thisWeekCount', { count: 3 })}
               </Text>
             </View>
 
@@ -174,13 +176,13 @@ export default function ProgressScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Errors Caught
+                  {t('progress.errorsCaught')}
                 </Text>
                 <Ionicons name="shield-checkmark" size={18} color="#E8711A" />
               </View>
               <Text style={{ fontSize: 36, color: '#FFFFFF', fontWeight: '800' }}>5</Text>
               <Text style={{ fontSize: 12, color: '#E8711A', marginTop: 4, fontWeight: '600' }}>
-                Saved hours of rework
+                {t('progress.savedHoursRework')}
               </Text>
             </View>
           </View>
@@ -199,13 +201,13 @@ export default function ProgressScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Hours
+                  {t('progress.hoursLogged')}
                 </Text>
                 <Ionicons name="time" size={18} color="#1976D2" />
               </View>
               <Text style={{ fontSize: 36, color: '#FFFFFF', fontWeight: '800' }}>8.5</Text>
               <Text style={{ fontSize: 12, color: '#1976D2', marginTop: 4, fontWeight: '600' }}>
-                Total tracked
+                {t('progress.totalTracked')}
               </Text>
             </View>
 
@@ -222,13 +224,13 @@ export default function ProgressScreen() {
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                 <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Streak
+                  {t('progress.streak')}
                 </Text>
                 <Text style={{ fontSize: 18 }}>🔥</Text>
               </View>
               <Text style={{ fontSize: 36, color: '#E8711A', fontWeight: '800' }}>3</Text>
               <Text style={{ fontSize: 12, color: '#8E8E93', marginTop: 4, fontWeight: '600' }}>
-                Days in a row
+                {t('progress.daysInRow')}
               </Text>
             </View>
           </View>
@@ -238,10 +240,10 @@ export default function ProgressScreen() {
         <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
           <View style={{ backgroundColor: '#2C2C2E', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#3A3A3C' }}>
             <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '700', marginBottom: 4 }}>
-              Weekly Activity
+              {t('progress.weeklyActivity')}
             </Text>
             <Text style={{ fontSize: 12, color: '#8E8E93', marginBottom: 20 }}>
-              Tasks completed per day
+              {t('progress.tasksPerDay')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 4 }}>
               <WeeklyChart />
@@ -252,9 +254,9 @@ export default function ProgressScreen() {
         {/* Recent Tasks */}
         <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }}>Recent Tasks</Text>
+            <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }}>{t('progress.recentTasks')}</Text>
             <TouchableOpacity>
-              <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>View All</Text>
+              <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>{t('progress.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -298,12 +300,12 @@ export default function ProgressScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                       <Ionicons name="camera-outline" size={11} color="#636366" />
-                      <Text style={{ color: '#636366', fontSize: 11 }}>{task.aiChecks} checks</Text>
+                      <Text style={{ color: '#636366', fontSize: 11 }}>{t('progress.checks', { count: task.aiChecks })}</Text>
                     </View>
                     {task.errors > 0 && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                         <Ionicons name="alert-circle-outline" size={11} color="#D32F2F" />
-                        <Text style={{ color: '#D32F2F', fontSize: 11 }}>{task.errors} caught</Text>
+                        <Text style={{ color: '#D32F2F', fontSize: 11 }}>{t('progress.caught', { count: task.errors })}</Text>
                       </View>
                     )}
                   </View>
@@ -317,7 +319,7 @@ export default function ProgressScreen() {
         {/* Achievements */}
         <View style={{ marginHorizontal: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }}>Achievements</Text>
+            <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }}>{t('progress.achievements')}</Text>
             <Text style={{ color: '#8E8E93', fontSize: 13 }}>
               {ACHIEVEMENTS.filter((a) => a.unlocked).length}/{ACHIEVEMENTS.length}
             </Text>

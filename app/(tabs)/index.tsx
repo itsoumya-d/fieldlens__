@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
 import { getTasks, getUserProgress } from '@/lib/api';
+import { useTranslation } from 'react-i18next';
 
 const QUICK_ACTIONS = [
   { id: 'camera', icon: 'camera', label: 'AI Camera', color: '#E8711A', route: '/(tabs)/camera' },
@@ -111,7 +112,7 @@ function GpsStatusChip({ checkedIn, onPress }: { checkedIn: boolean; onPress: ()
       <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: color }} />
       <Ionicons name={checkedIn ? 'location' : 'location-outline'} size={14} color={color} />
       <Text style={{ fontSize: 12, fontWeight: '700', color }}>
-        {checkedIn ? 'Checked In' : 'Check In'}
+        {checkedIn ? t('home.checkedIn') : t('home.checkIn')}
       </Text>
     </TouchableOpacity>
   );
@@ -247,6 +248,7 @@ function ScheduleTimeBlock({ block }: { block: ScheduleBlock }) {
 }
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { user, trade } = useAuthStore();
   const { activeSession, analysisCount, dailyLimit } = useAppStore();
   const [loading, setLoading] = useState(true);
@@ -320,11 +322,11 @@ export default function HomeScreen() {
               checkedIn={checkedIn}
               onPress={() =>
                 Alert.alert(
-                  'GPS Check-in',
-                  checkedIn ? 'Check out of current location?' : 'Check in to your current GPS location?',
+                  t('home.gpsCheckIn'),
+                  checkedIn ? t('home.checkOutConfirm') : t('home.checkInConfirm'),
                   [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: checkedIn ? 'Check Out' : 'Check In', onPress: () => setCheckedIn(!checkedIn) },
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: checkedIn ? t('home.checkOut') : t('home.checkIn'), onPress: () => setCheckedIn(!checkedIn) },
                   ]
                 )
               }
@@ -398,7 +400,7 @@ export default function HomeScreen() {
             >
               <Text style={{ fontSize: 22, color: '#E8711A', fontWeight: '800' }}>🔥</Text>
               <Text style={{ fontSize: 18, color: '#E8711A', fontWeight: '800' }}>3</Text>
-              <Text style={{ fontSize: 10, color: '#8E8E93', fontWeight: '600' }}>DAY STREAK</Text>
+              <Text style={{ fontSize: 10, color: '#8E8E93', fontWeight: '600' }}>{t('home.dayStreak')}</Text>
             </View>
           </View>
 
@@ -435,9 +437,9 @@ export default function HomeScreen() {
         {/* Today's Schedule */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600' }}>TODAY'S SCHEDULE</Text>
+            <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600' }}>{t('home.todaysSchedule')}</Text>
             <Text style={{ fontSize: 12, color: '#E8711A', fontWeight: '600' }}>
-              {todaySchedule.filter(b => b.status !== 'done').length} remaining
+              {t('home.remaining', { count: todaySchedule.filter(b => b.status !== 'done').length })}
             </Text>
           </View>
           {todaySchedule.map((block) => (
@@ -449,7 +451,7 @@ export default function HomeScreen() {
         {activeSession && (
           <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
             <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600', marginBottom: 10 }}>
-              CONTINUE WHERE YOU LEFT OFF
+              {t('home.continueWhereLeftOff')}
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
@@ -504,7 +506,7 @@ export default function HomeScreen() {
         {/* Quick Actions */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600', marginBottom: 12 }}>
-            QUICK ACTIONS
+            {t('home.quickActions')}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
             {QUICK_ACTIONS.map((action) => (
@@ -548,10 +550,10 @@ export default function HomeScreen() {
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600' }}>
-              RECOMMENDED FOR YOU
+              {t('home.recommendedForYou')}
             </Text>
             <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/(tabs)/library')}>
-              <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>See All</Text>
+              <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>{t('home.seeAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -611,7 +613,7 @@ export default function HomeScreen() {
         {/* Recent Activity */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600', marginBottom: 12 }}>
-            RECENT ACTIVITY
+            {t('home.recentActivity')}
           </Text>
           <View style={{ gap: 8 }}>
             {recentActivity.slice(0, 5).map((activity) => {
@@ -684,10 +686,10 @@ export default function HomeScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
-                Upgrade to Pro
+                {t('home.upgradeToPro')}
               </Text>
               <Text style={{ color: '#8E8E93', fontSize: 13, marginTop: 2 }}>
-                Unlimited AI analyses + voice coaching
+                {t('home.unlimitedAiCoaching')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#E8711A" />
@@ -702,11 +704,11 @@ export default function HomeScreen() {
         activeOpacity={0.85}
         onPress={() =>
           Alert.alert(
-            'Voice Note',
-            'Start recording a voice note for this job?',
+            t('home.voiceNote'),
+            t('home.startRecordingConfirm'),
             [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Record', onPress: () => {} },
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('home.record'), onPress: () => {} },
             ]
           )
         }

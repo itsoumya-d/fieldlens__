@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/app';
 import { analyzeImage } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ const resultConfig = {
 };
 
 export default function CameraScreen() {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<'on' | 'off'>('off');
@@ -72,11 +74,11 @@ export default function CameraScreen() {
   const handleCapture = async () => {
     if (analysisCount >= dailyLimit) {
       Alert.alert(
-        'Daily Limit Reached',
-        'Upgrade to Pro for unlimited AI analyses.',
+        t('camera.dailyLimitReached'),
+        t('camera.upgradeForUnlimited'),
         [
-          { text: 'Maybe Later', style: 'cancel' },
-          { text: 'Upgrade', onPress: () => {} },
+          { text: t('camera.maybeLater'), style: 'cancel' },
+          { text: t('camera.upgrade'), onPress: () => {} },
         ]
       );
       return;
@@ -117,7 +119,7 @@ export default function CameraScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
     } catch (err) {
-      Alert.alert('Analysis Failed', 'Could not analyze the image. Please try again.');
+      Alert.alert(t('camera.analysisFailed'), t('camera.couldNotAnalyze'));
     } finally {
       setIsAnalyzing(false);
       setShowOverlay(true);
@@ -156,10 +158,10 @@ export default function CameraScreen() {
           <Ionicons name="camera-outline" size={40} color="#D32F2F" />
         </View>
         <Text style={{ fontSize: 22, color: '#FFFFFF', fontWeight: '700', textAlign: 'center', marginBottom: 12 }}>
-          Camera Access Required
+          {t('camera.cameraAccessRequired')}
         </Text>
         <Text style={{ fontSize: 15, color: '#8E8E93', textAlign: 'center', lineHeight: 22, marginBottom: 32 }}>
-          FieldLens needs camera access to analyze your work and provide AI coaching.
+          {t('camera.cameraPermissionDesc')}
         </Text>
         <TouchableOpacity accessibilityRole="button"
           onPress={requestPermission}
@@ -175,7 +177,7 @@ export default function CameraScreen() {
             elevation: 8,
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Grant Permission</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{t('camera.grantPermission')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -240,7 +242,7 @@ export default function CameraScreen() {
             >
               <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E8711A' }} />
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600' }}>
-                {activeSession ? activeSession.taskTitle : 'Free Analysis'}
+                {activeSession ? activeSession.taskTitle : t('home.freeAnalysis')}
               </Text>
             </View>
 
@@ -302,9 +304,9 @@ export default function CameraScreen() {
               >
                 <ActivityIndicator color="#E8711A" size="large" />
                 <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                  Analyzing your work...
+                  {t('camera.analyzingWork')}
                 </Text>
-                <Text style={{ color: '#8E8E93', fontSize: 13 }}>AI is reviewing the image</Text>
+                <Text style={{ color: '#8E8E93', fontSize: 13 }}>{t('camera.aiReviewing')}</Text>
               </View>
             )}
           </View>
@@ -545,7 +547,7 @@ export default function CameraScreen() {
                     borderColor: '#3A3A3C',
                   }}
                 >
-                  <Text style={{ color: '#EBEBF5', fontSize: 15, fontWeight: '600' }}>Dismiss</Text>
+                  <Text style={{ color: '#EBEBF5', fontSize: 15, fontWeight: '600' }}>{t('camera.dismiss')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity accessibilityRole="button"
                   onPress={handleCapture}
@@ -566,7 +568,7 @@ export default function CameraScreen() {
                   }}
                 >
                   <Ionicons name="camera" size={18} color="#FFFFFF" />
-                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Analyze Again</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{t('camera.analyzeAgain')}</Text>
                 </TouchableOpacity>
               </View>
             </Animated.View>
