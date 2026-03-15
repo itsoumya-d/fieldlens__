@@ -41,14 +41,14 @@ const TRADES: TradeOption[] = [
     label: 'Carpentry',
     icon: 'hammer',
     description: 'Framing, finish work, cabinetry',
-    available: false,
+    available: true,
   },
   {
     id: 'other',
     label: 'General',
     icon: 'construct',
     description: 'Other skilled trades',
-    available: false,
+    available: true,
   },
 ];
 
