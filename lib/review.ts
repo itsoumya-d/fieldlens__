@@ -1,19 +1,27 @@
 import * as StoreReview from 'expo-store-review';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const REVIEW_KEY = 'review_requested';
-const ACTION_COUNT_KEY = 'action_count';
+const REVIEW_KEY = '@fieldlens_last_review';
+const REVIEW_INTERVAL_MS = 60 * 24 * 60 * 60 * 1000; // 60 days
 
-export async function trackAction() {
-  const count = parseInt(await AsyncStorage.getItem(ACTION_COUNT_KEY) || '0', 10) + 1;
-  await AsyncStorage.setItem(ACTION_COUNT_KEY, count.toString());
+/**
+ * Prompt the user for a store review, rate-limited to once per 60 days.
+ * Silently no-ops when unavailable or within the cooldown window.
+ */
+export async function triggerReview(): Promise<void> {
+  try {
+    const isAvailable = await StoreReview.isAvailableAsync();
+    if (!isAvailable) return;
 
-  // Request review after 3rd successful action, only once
-  if (count === 3) {
-    const alreadyRequested = await AsyncStorage.getItem(REVIEW_KEY);
-    if (!alreadyRequested && await StoreReview.hasAction()) {
-      await StoreReview.requestReview();
-      await AsyncStorage.setItem(REVIEW_KEY, 'true');
+    const lastReview = await AsyncStorage.getItem(REVIEW_KEY);
+    if (lastReview) {
+      const elapsed = Date.now() - parseInt(lastReview, 10);
+      if (elapsed < REVIEW_INTERVAL_MS) return;
     }
+
+    await StoreReview.requestReview();
+    await AsyncStorage.setItem(REVIEW_KEY, Date.now().toString());
+  } catch {
+    // Silently fail — review prompts must never break the app
   }
 }

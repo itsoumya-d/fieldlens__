@@ -19,6 +19,7 @@ import { useAppStore } from '@/store/app';
 import { analyzeImage } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
+import { triggerReview } from '@/lib/review';
 
 const { width, height } = Dimensions.get('window');
 
@@ -110,6 +111,7 @@ export default function CameraScreen() {
 
       setAssessment(result);
       incrementAnalysis();
+      triggerReview();
 
       if (result.result === 'correct') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
