@@ -60,3 +60,68 @@ export async function getRecommendedTasks(trade: string, userId: string) {
 export async function getCertifications(userId: string) {
   return supabase.from('certifications').select('*').eq('user_id', userId).order('earned_at', { ascending: false });
 }
+
+// ── Time Tracking ──────────────────────────────────────────────
+
+export async function startTimeEntry(userId: string, taskId?: string, jobId?: string) {
+  return supabase.from('time_entries').insert({
+    user_id: userId,
+    task_id: taskId ?? null,
+    job_id: jobId ?? null,
+    started_at: new Date().toISOString(),
+  }).select().single();
+}
+
+export async function stopTimeEntry(entryId: string) {
+  return supabase
+    .from('time_entries')
+    .update({ ended_at: new Date().toISOString() })
+    .eq('id', entryId)
+    .select()
+    .single();
+}
+
+export async function getActiveTimeEntry(userId: string) {
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .is('ended_at', null)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
+export async function getWeeklyTimeEntries(userId: string) {
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  return supabase
+    .from('time_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('started_at', weekAgo.toISOString())
+    .order('started_at', { ascending: false });
+}
+
+export async function getTodayTotal(userId: string): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from('time_entries')
+    .select('started_at, ended_at, break_minutes')
+    .eq('user_id', userId)
+    .gte('started_at', startOfDay.toISOString());
+
+  if (error || !data) return 0;
+
+  let totalSeconds = 0;
+  const now = new Date();
+  for (const entry of data) {
+    const start = new Date(entry.started_at);
+    const end = entry.ended_at ? new Date(entry.ended_at) : now;
+    const breakSec = (entry.break_minutes ?? 0) * 60;
+    totalSeconds += Math.max(0, (end.getTime() - start.getTime()) / 1000 - breakSec);
+  }
+  return Math.round((totalSeconds / 3600) * 10) / 10; // 1 decimal place
+}

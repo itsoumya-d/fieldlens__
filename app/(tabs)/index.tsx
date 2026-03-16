@@ -6,7 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
-import { getTasks, getUserProgress } from '@/lib/api';
+import { getTasks, getUserProgress, getTodayTotal } from '@/lib/api';
+import TimeTracker from '@/components/TimeTracker';
 import { useTranslation } from 'react-i18next';
 
 const QUICK_ACTIONS = [
@@ -255,6 +256,7 @@ export default function HomeScreen() {
   const [recommendedTasks, setRecommendedTasks] = useState<TaskRow[]>([]);
   const [recentActivity, setRecentActivity] = useState<ProgressRow[]>([]);
   const [checkedIn, setCheckedIn] = useState(false);
+  const [todayHours, setTodayHours] = useState(0);
 
   const displayName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
   const greeting = getHoursGreeting();
@@ -266,8 +268,13 @@ export default function HomeScreen() {
     Promise.all([
       getTasks(currentTrade).then(({ data }) => { if (data) setRecommendedTasks(data as TaskRow[]); }),
       getUserProgress(user.id).then(({ data }) => { if (data) setRecentActivity(data as ProgressRow[]); }),
+      getTodayTotal(user.id).then((hours) => setTodayHours(hours)),
     ]).finally(() => setLoading(false));
   }, [user, trade]);
+
+  const refreshTodayHours = () => {
+    if (user) getTodayTotal(user.id).then((hours) => setTodayHours(hours));
+  };
 
   // Simulated today's schedule
   const todaySchedule: ScheduleBlock[] = [
@@ -409,7 +416,7 @@ export default function HomeScreen() {
             {[
               { label: 'Tasks Today', value: String(recentActivity.filter(a => a.completed_at && new Date(a.completed_at).toDateString() === new Date().toDateString()).length), icon: 'checkmark-circle', color: '#2D8A4E' },
               { label: 'AI Analyses', value: `${analysisCount}/${dailyLimit}`, icon: 'camera', color: '#E8711A' },
-              { label: 'Hours', value: '1.5', icon: 'time', color: '#1976D2' },
+              { label: 'Hours', value: String(todayHours), icon: 'time', color: '#1976D2' },
             ].map((stat) => (
               <View
                 key={stat.label}
@@ -433,6 +440,9 @@ export default function HomeScreen() {
 
         {/* Weather Widget */}
         <WeatherWidget weather={weather} />
+
+        {/* Time Tracker */}
+        <TimeTracker onTotalChange={refreshTodayHours} />
 
         {/* Today's Schedule */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
