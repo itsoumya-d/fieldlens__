@@ -1,10 +1,11 @@
-import { View, Text, TouchableOpacity, ScrollView, Pressable, Animated, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Pressable, Animated, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import Purchases, { PurchasesPackage } from 'react-native-purchases';
 
 const PRIMARY = '#15803D';
 const PRIMARY_BG = '#DCFCE7';
@@ -44,6 +45,7 @@ export default function PaywallScreen() {
   const router = useRouter();
   const [selectedPlan, setSelectedPlan] = useState('annual');
   const [loading, setLoading] = useState(false);
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -56,14 +58,59 @@ export default function PaywallScreen() {
       ])
     );
     pulse.start();
+    // Load RevenueCat offerings
+    Purchases.getOfferings()
+      .then(offerings => {
+        if (offerings.current?.availablePackages) {
+          setPackages(offerings.current.availablePackages);
+        }
+      })
+      .catch(() => {});
     return () => pulse.stop();
   }, []);
 
   const handleSubscribe = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
-    // RevenueCat: await Purchases.purchasePackage(selectedPackage);
-    setTimeout(() => { setLoading(false); router.replace('/(tabs)/'); }, 1500);
+    try {
+      const pkg = packages.find(p =>
+        selectedPlan === 'annual'
+          ? p.packageType === 'ANNUAL'
+          : p.packageType === 'MONTHLY'
+      ) ?? packages[0];
+      if (!pkg) {
+        Alert.alert('Error', 'No packages available. Please try again later.');
+        setLoading(false);
+        return;
+      }
+      const { customerInfo } = await Purchases.purchasePackage(pkg);
+      if (customerInfo.entitlements.active['pro'] || Object.keys(customerInfo.entitlements.active).length > 0) {
+        router.replace('/(tabs)/');
+      }
+    } catch (e: any) {
+      if (!e.userCancelled) {
+        Alert.alert('Purchase Failed', e.message ?? 'Something went wrong. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setLoading(true);
+    try {
+      const customerInfo = await Purchases.restorePurchases();
+      if (Object.keys(customerInfo.entitlements.active).length > 0) {
+        Alert.alert('Success', 'Your purchases have been restored!');
+        router.replace('/(tabs)/');
+      } else {
+        Alert.alert('No Purchases', 'No active subscriptions found to restore.');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not restore purchases. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -161,7 +208,7 @@ export default function PaywallScreen() {
             <TouchableOpacity onPress={() => router.replace('/(tabs)/')} style={s.skipBtn}>
               <Text style={s.skipText}>{t('paywall.maybeLater')}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.restoreBtn}>
+            <TouchableOpacity style={s.restoreBtn} onPress={handleRestore}>
               <Text style={s.restoreText}>{t('paywall.restore')}</Text>
             </TouchableOpacity>
             <Text style={s.legalText}>
