@@ -22,11 +22,11 @@ export async function signInWithApple() {
       },
     });
     return { data, error };
-  } catch (e: any) {
-    if (e.code === 'ERR_REQUEST_CANCELED') {
+  } catch (e: unknown) {
+    if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') {
       return { data: null, error: null };
     }
-    return { data: null, error: e };
+    return { data: null, error: e as Error };
   }
 }
 
