@@ -9,6 +9,14 @@ import {
   ActivityIndicator,
   type ViewStyle,
 } from 'react-native';
+import Reanimated, {
+  useSharedValue,
+  withTiming,
+  useAnimatedStyle,
+  FadeIn,
+  FadeOut,
+  Easing,
+} from 'react-native-reanimated';
 import PressableScale from '@/components/PressableScale';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
@@ -30,6 +38,7 @@ import * as Speech from 'expo-speech';
 const { width, height } = Dimensions.get('window');
 
 type AssessmentResult = 'correct' | 'warning' | 'error' | 'unclear';
+type AIAnalysisStage = 'idle' | 'capturing' | 'uploading' | 'analyzing' | 'complete' | 'error';
 
 interface Assessment {
   result: AssessmentResult;
@@ -120,13 +129,18 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<'on' | 'off'>('off');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStage, setAnalysisStage] = useState<AIAnalysisStage>('idle');
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
 
+  const stageProgress = useSharedValue(0);
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const cameraRef = useRef<CameraView>(null);
+
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${stageProgress.value}%` as unknown as number,
+  }));
 
   const { analysisCount, dailyLimit, incrementAnalysis, activeSession } = useAppStore();
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -163,8 +177,10 @@ export default function CameraScreen() {
 
     if (!cameraRef.current) return;
 
+    // Stage: capturing — immediately on shutter tap
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setIsAnalyzing(true);
+    setAnalysisStage('capturing');
+    stageProgress.value = 0;
     setAssessment(null);
     setShowOverlay(false);
 
@@ -172,8 +188,14 @@ export default function CameraScreen() {
       // Task 9: Offline fallback — check connectivity before calling AI
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
+        setAnalysisStage('complete');
+        stageProgress.value = withTiming(100, { duration: 300 });
         setAssessment(OFFLINE_RESULT);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setTimeout(() => {
+          setAnalysisStage('idle');
+          setShowOverlay(true);
+        }, 400);
         return;
       }
 
@@ -185,16 +207,28 @@ export default function CameraScreen() {
       });
 
       if (!photo?.uri) throw new Error('No image data captured');
+
+      // Stage: uploading — compression + sending begins
+      setAnalysisStage('uploading');
+      stageProgress.value = withTiming(40, { duration: 800, easing: Easing.out(Easing.ease) });
       const base64 = await compressToBase64(photo.uri);
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Stage: analyzing — API call in flight, animate to 90 and hold
+      setAnalysisStage('analyzing');
+      stageProgress.value = withTiming(90, { duration: 2000, easing: Easing.out(Easing.ease) });
+
       // Call real GPT-4o Vision analysis
       const result = await analyzeImage(user.id, base64, activeSession?.trade ?? 'general');
 
+      // Stage: complete — result arrived
       setAssessment(result);
+      setAnalysisStage('complete');
+      stageProgress.value = withTiming(100, { duration: 300 });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Persist result to ai_analyses; enqueue offline if insert fails
       const analysisPayload = {
@@ -216,16 +250,9 @@ export default function CameraScreen() {
       triggerReview();
 
       if (result.result === 'correct') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Award XP: 10 for correct, 5 for warning
         awardXPAndCheckAchievements(user.id, 10);
       } else if (result.result === 'warning') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         awardXPAndCheckAchievements(user.id, 5);
-      } else if (result.result === 'error') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
 
       // Voice feedback (Task 5)
@@ -237,11 +264,19 @@ export default function CameraScreen() {
         const spoken = `${prefix}${result.message}${result.recommendation ? '. ' + result.recommendation : ''}`;
         Speech.speak(spoken, { rate: 0.95, pitch: 1.0 });
       }
+
+      // Auto-dismiss stage overlay after 400ms, then show result sheet
+      setTimeout(() => {
+        setAnalysisStage('idle');
+        setShowOverlay(true);
+      }, 400);
     } catch (err) {
+      setAnalysisStage('error');
+      stageProgress.value = withTiming(0, { duration: 200 });
       showToast(t('camera.couldNotAnalyze'), 'error');
-    } finally {
-      setIsAnalyzing(false);
-      setShowOverlay(true);
+      setTimeout(() => {
+        setAnalysisStage('idle');
+      }, 1500);
     }
   };
 
@@ -432,26 +467,59 @@ export default function CameraScreen() {
               />
             ))}
 
-            {/* Analyzing indicator */}
-            {isAnalyzing && (
-              <View
+            {/* AI Analysis Stage Overlay */}
+            {analysisStage !== 'idle' && (
+              <Reanimated.View
+                entering={FadeIn.duration(200)}
+                exiting={FadeOut.duration(200)}
                 style={{
-                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                  paddingHorizontal: 24,
-                  paddingVertical: 16,
-                  borderRadius: 16,
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundColor: 'rgba(0,0,0,0.85)',
                   alignItems: 'center',
-                  gap: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(232, 113, 26, 0.5)',
+                  justifyContent: 'center',
+                  paddingHorizontal: 32,
                 }}
               >
-                <ActivityIndicator color="#E8711A" size="large" />
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                  {t('camera.analyzingWork')}
+                {/* Stage label */}
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600', marginBottom: 8, textAlign: 'center' }}>
+                  {analysisStage === 'capturing'  ? '📸 Capturing...'
+                  : analysisStage === 'uploading' ? '⬆️ Uploading photo...'
+                  : analysisStage === 'analyzing' ? '🤖 Analyzing for code violations...'
+                  : analysisStage === 'complete'  ? '✅ Analysis complete'
+                  : '❌ Analysis failed'}
                 </Text>
-                <Text style={{ color: '#8E8E93', fontSize: 13 }}>{t('camera.aiReviewing')}</Text>
-              </View>
+
+                {/* Secondary hint for analyzing stage */}
+                {analysisStage === 'analyzing' && (
+                  <Text style={{ color: '#94A3B8', fontSize: 12, marginBottom: 20, textAlign: 'center' }}>
+                    {'AI is reviewing ' + (activeSession?.trade ?? 'general') + ' compliance standards'}
+                  </Text>
+                )}
+                {analysisStage !== 'analyzing' && <View style={{ height: 20 }} />}
+
+                {/* Progress bar track */}
+                <View
+                  style={{
+                    width: '100%',
+                    height: 40,
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <Reanimated.View
+                    style={[
+                      {
+                        height: 40,
+                        backgroundColor: analysisStage === 'error' ? '#D32F2F' : '#E8711A',
+                        borderRadius: 4,
+                      },
+                      progressBarStyle,
+                    ]}
+                  />
+                </View>
+              </Reanimated.View>
             )}
           </View>
 
@@ -489,12 +557,12 @@ export default function CameraScreen() {
               {/* Capture button */}
               <PressableScale haptic="medium" accessibilityRole="button"
                 onPress={handleCapture}
-                disabled={isAnalyzing}
+                disabled={analysisStage !== 'idle'}
                 style={{
                   width: 80,
                   height: 80,
                   borderRadius: 40,
-                  backgroundColor: isAnalyzing ? 'rgba(232, 113, 26, 0.5)' : '#E8711A',
+                  backgroundColor: analysisStage !== 'idle' ? 'rgba(232, 113, 26, 0.5)' : '#E8711A',
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 4,
@@ -506,11 +574,7 @@ export default function CameraScreen() {
                   elevation: 10,
                 }}
               >
-                {isAnalyzing ? (
-                  <ActivityIndicator color="#FFFFFF" size="large" />
-                ) : (
-                  <Ionicons name="scan" size={32} color="#FFFFFF" />
-                )}
+                <Ionicons name="scan" size={32} color="#FFFFFF" />
               </PressableScale>
 
               {/* Voice toggle */}
