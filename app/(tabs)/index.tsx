@@ -866,9 +866,18 @@ export default function HomeScreen() {
             </Text>
           </Reanimated.View>
           {todaySchedule.length === 0 ? (
-            <View style={{ padding: 20, borderRadius: 14, backgroundColor: '#2C2C2E', borderWidth: 1, borderColor: '#3A3A3C', alignItems: 'center', gap: 8 }}>
+            <View style={{ padding: 20, borderRadius: 14, backgroundColor: '#2C2C2E', borderWidth: 1, borderColor: '#3A3A3C', alignItems: 'center', gap: 10 }}>
               <Ionicons name="time-outline" size={24} color="#3A3A3C" />
-              <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>No time entries today{'\n'}Start tracking a task to see your schedule</Text>
+              <Text style={{ color: '#64748B', fontSize: 13, textAlign: 'center' }}>No time entries today{'\n'}Pick a task from the library to get started</Text>
+              <PressableScale
+                haptic="light"
+                accessibilityRole="button"
+                accessibilityLabel="Browse task library"
+                onPress={() => router.push('/(tabs)/library')}
+                style={{ backgroundColor: 'rgba(232,113,26,0.12)', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(232,113,26,0.3)' }}
+              >
+                <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>Browse Library</Text>
+              </PressableScale>
             </View>
           ) : (
             todaySchedule.map((block, index) => (
@@ -879,8 +888,8 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Continue where you left off */}
-        {activeSession && (
+        {/* Continue where you left off — or prompt new users to start */}
+        {activeSession ? (
           <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
             <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600', marginBottom: 10 }}>
               {t('home.continueWhereLeftOff')}
@@ -932,6 +941,23 @@ export default function HomeScreen() {
                 </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            </PressableScale>
+          </View>
+        ) : (
+          <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600', marginBottom: 10 }}>
+              {t('home.continueWhereLeftOff')}
+            </Text>
+            <PressableScale
+              haptic="light"
+              accessibilityRole="button"
+              accessibilityLabel="Start your first task"
+              onPress={() => router.push('/(tabs)/library')}
+              style={{ padding: 20, borderRadius: 16, backgroundColor: '#2C2C2E', borderWidth: 1, borderColor: 'rgba(232,113,26,0.25)', alignItems: 'center', gap: 8 }}
+            >
+              <Ionicons name="play-circle-outline" size={36} color="#E8711A" />
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Start Your First Task</Text>
+              <Text style={{ color: '#8E8E93', fontSize: 13, textAlign: 'center' }}>Browse the task library to pick a job and earn XP</Text>
             </PressableScale>
           </View>
         )}
@@ -1075,7 +1101,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Upgrade Banner */}
+        {/* Upgrade Banner — only for free-tier users */}
+        {user?.user_metadata?.plan !== 'pro' && (
         <View style={{ marginHorizontal: 20 }}>
           <PressableScale
             haptic="medium"
@@ -1115,6 +1142,7 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={18} color="#E8711A" />
           </PressableScale>
         </View>
+        )}
       </ScrollView>
 
       {/* Voice Note FAB — always visible, prominent */}
