@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Pressable, Animated, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Animated, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -6,6 +6,9 @@ import { useState, useRef, useEffect } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import PressableScale from '@/components/PressableScale';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 
 const PRIMARY = '#15803D';
 const PRIMARY_BG = '#DCFCE7';
@@ -43,6 +46,7 @@ const FEATURES = [
 export default function PaywallScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { toast, showToast, hideToast } = useToast();
   const [selectedPlan, setSelectedPlan] = useState('annual');
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -79,7 +83,7 @@ export default function PaywallScreen() {
           : p.packageType === 'MONTHLY'
       ) ?? packages[0];
       if (!pkg) {
-        Alert.alert('Error', 'No packages available. Please try again later.');
+        showToast('No packages available. Please try again later.', 'error');
         setLoading(false);
         return;
       }
@@ -87,9 +91,10 @@ export default function PaywallScreen() {
       if (customerInfo.entitlements.active['pro'] || Object.keys(customerInfo.entitlements.active).length > 0) {
         router.replace('/(tabs)/');
       }
-    } catch (e: any) {
-      if (!e.userCancelled) {
-        Alert.alert('Purchase Failed', e.message ?? 'Something went wrong. Please try again.');
+    } catch (e: unknown) {
+      const err = e as { userCancelled?: boolean; message?: string };
+      if (!err.userCancelled) {
+        showToast(err.message ?? 'Something went wrong. Please try again.', 'error');
       }
     } finally {
       setLoading(false);
@@ -101,13 +106,13 @@ export default function PaywallScreen() {
     try {
       const customerInfo = await Purchases.restorePurchases();
       if (Object.keys(customerInfo.entitlements.active).length > 0) {
-        Alert.alert('Success', 'Your purchases have been restored!');
+        showToast('Your purchases have been restored!', 'success');
         router.replace('/(tabs)/');
       } else {
-        Alert.alert('No Purchases', 'No active subscriptions found to restore.');
+        showToast('No active subscriptions found to restore.', 'info');
       }
     } catch {
-      Alert.alert('Error', 'Could not restore purchases. Please try again.');
+      showToast('Could not restore purchases. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -118,9 +123,9 @@ export default function PaywallScreen() {
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={s.closeRow}>
-            <TouchableOpacity onPress={() => router.back()} style={s.closeBtn} accessibilityLabel="Close" accessibilityRole="button">
+            <PressableScale onPress={() => router.back()} haptic="light" style={s.closeBtn} accessibilityLabel="Close" accessibilityRole="button">
               <Ionicons name="close" size={22} color="#6B7280" />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <View style={s.header}>
@@ -195,27 +200,29 @@ export default function PaywallScreen() {
 
           <View style={s.cta}>
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <TouchableOpacity
+              <PressableScale
                 onPress={handleSubscribe}
+                haptic="medium"
                 disabled={loading}
                 style={[s.ctaBtn, { backgroundColor: PRIMARY }]}
               >
                 <Text style={s.ctaBtnText}>
                   {loading ? t('auth.processing') : selectedPlan === 'annual' ? `🎁  ${t('paywall.startTrial')}` : `  ${t('paywall.subscribeNow')}`}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             </Animated.View>
-            <TouchableOpacity onPress={() => router.replace('/(tabs)/')} style={s.skipBtn}>
+            <PressableScale onPress={() => router.replace('/(tabs)/')} haptic="light" style={s.skipBtn}>
               <Text style={s.skipText}>{t('paywall.maybeLater')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.restoreBtn} onPress={handleRestore}>
+            </PressableScale>
+            <PressableScale style={s.restoreBtn} haptic="light" onPress={handleRestore}>
               <Text style={s.restoreText}>{t('paywall.restore')}</Text>
-            </TouchableOpacity>
+            </PressableScale>
             <Text style={s.legalText}>
               {t('paywall.legalText')}
             </Text>
           </View>
         </ScrollView>
+        <Toast {...toast} onHide={hideToast} />
       </Animated.View>
     </SafeAreaView>
   );

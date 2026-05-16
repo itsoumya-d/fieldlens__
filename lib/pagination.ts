@@ -1,4 +1,4 @@
-import { supabase } from './api';
+import { supabase } from './supabase';
 
 export interface CursorPage<T> {
   data: T[];

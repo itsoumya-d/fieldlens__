@@ -1,116 +1,112 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import PressableScale from '@/components/PressableScale';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/store/app';
+import { supabase } from '@/lib/supabase';
 
 type TabId = 'steps' | 'tips' | 'code';
 
-const MOCK_TASK = {
-  id: '1',
-  title: 'Install PVC P-Trap',
-  category: 'Install',
-  difficulty: 'beginner',
-  estimatedMinutes: 25,
-  trade: 'plumbing',
-  tools: ['Pipe wrench', '1-1/2" PVC P-trap', 'Teflon tape', 'Slip-joint pliers'],
-  steps: [
-    {
-      id: 1,
-      title: 'Turn off water supply',
-      instruction: 'Locate the shutoff valves under the sink and turn them clockwise until fully closed. Open the faucet to release pressure and verify water is off.',
-      codeRef: null,
-      checkMyWork: false,
-    },
-    {
-      id: 2,
-      title: 'Remove the old trap',
-      instruction: 'Place a bucket under the trap to catch water. Loosen the slip-joint nuts at both ends of the trap by hand or with slip-joint pliers. Remove the old trap and dispose properly.',
-      codeRef: null,
-      checkMyWork: false,
-    },
-    {
-      id: 3,
-      title: 'Check the drain outlet alignment',
-      instruction: 'The P-trap inlet must align with the drain tailpiece from the sink. The outlet connects to the wall drain stub-out. Verify the drain pipe extends 18"–24" from the wall.',
-      codeRef: 'IPC 1002.1',
-      checkMyWork: true,
-    },
-    {
-      id: 4,
-      title: 'Install trap arm into wall stub-out',
-      instruction: 'Insert the trap arm into the wall drain fitting. The trap arm must slope downward toward the wall at 1/4" per foot minimum. Secure with the slip-joint nut — hand tight plus 1/4 turn.',
-      codeRef: 'IPC 1002.3 — Max 24" arm length',
-      checkMyWork: true,
-    },
-    {
-      id: 5,
-      title: 'Connect trap to tailpiece',
-      instruction: 'Slide the slip-joint nut and washer onto the drain tailpiece. Connect the trap bend to the tailpiece. Ensure the P-portion of the trap maintains water seal — minimum 2" water depth.',
-      codeRef: 'IPC 1002.4 — Min 2" water seal',
-      checkMyWork: true,
-    },
-    {
-      id: 6,
-      title: 'Apply Teflon tape to threads',
-      instruction: 'Wrap Teflon tape clockwise around the threaded connections (2–3 wraps). Do not use tape on slip-joint connections — these seal with washers only.',
-      codeRef: null,
-      checkMyWork: false,
-    },
-    {
-      id: 7,
-      title: 'Tighten all connections',
-      instruction: 'Hand tighten all slip-joint nuts, then use pliers for 1/4 additional turn. Do NOT overtighten — PVC threads can crack. A snug, leak-free connection is the goal.',
-      codeRef: null,
-      checkMyWork: false,
-    },
-    {
-      id: 8,
-      title: 'Test for leaks',
-      instruction: 'Turn water supply back on. Run water for 60 seconds. Dry all connections and check with a paper towel. Look for any drips at all connection points. Run drain fully.',
-      codeRef: 'IPC 312.1 — Required leak test',
-      checkMyWork: true,
-    },
-  ],
-  tips: [
-    'Always use PVC slip-joint washers for PVC traps — rubber washers compress differently and may leak over time.',
-    'The P-trap must always stay full of water to block sewer gases. Never install dry or allow to drain fully.',
-    'If drain smells, the trap may be dried out or missing — never skip the P-trap.',
-    "Check local code: some jurisdictions require chrome traps in exposed locations (e.g., ADA sinks).",
-    'The distance from the trap weir to the wall drain must not exceed 24" per most codes (IPC 1002.3).',
-  ],
-  commonMistakes: [
-    'Over-tightening PVC slip-joint nuts — causes cracking within weeks.',
-    'Installing with a drop of more than 1/2" per foot — causes self-siphoning.',
-    'Using the wrong washer type — rubber vs. PVC compression washers.',
-    'Forgetting the water seal — leads to sewer gas entering home.',
-    'Misaligning the trap arm — causes slow drainage and standing water.',
-  ],
-  codeRefs: [
-    { code: 'IPC 1002.1', description: 'Each fixture must be separately trapped. Trap required between fixture outlet and drainage system.' },
-    { code: 'IPC 1002.3', description: 'Trap arm from trap weir to inner edge of vent: max 24" for 1-1/2" pipe.' },
-    { code: 'IPC 1002.4', description: 'Minimum water seal in trap: 2 inches. Maximum: 4 inches.' },
-    { code: 'IPC 312.1', description: 'Drainage system shall be tested by water or air test before concealing.' },
-  ],
-};
+interface TaskStep {
+  id: string;
+  title: string;
+  instruction: string;
+  codeRef: string | null;
+  checkMyWork: boolean;
+}
+
+interface CodeRef {
+  code: string;
+  description: string;
+}
+
+interface TaskStepRow {
+  id: string;
+  title: string;
+  instructions: string;
+  step_number: number;
+  code_reference?: string | null;
+  check_my_work?: boolean | null;
+}
+
+interface Task {
+  id: string;
+  title: string;
+  category: string;
+  difficulty: string;
+  estimatedMinutes: number;
+  trade: string;
+  tools: string[];
+  steps: TaskStep[];
+  tips: string[];
+  commonMistakes: string[];
+  codeRefs: CodeRef[];
+}
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { toast, showToast, hideToast } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<TabId>('steps');
   const { setActiveSession } = useAppStore();
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const task = MOCK_TASK;
+  useEffect(() => {
+    async function fetchTask() {
+      const { data } = await supabase
+        .from('tasks')
+        .select('*, task_steps(*)')
+        .eq('id', id)
+        .single();
+      if (data) {
+        setTask({
+          id: data.id,
+          title: data.title,
+          category: data.category ?? '',
+          difficulty: data.difficulty ?? 'beginner',
+          estimatedMinutes: data.estimated_minutes ?? 0,
+          trade: data.trade ?? '',
+          tools: data.tools ?? [],
+          steps: (data.task_steps ?? [])
+            .sort((a: TaskStepRow, b: TaskStepRow) => a.step_number - b.step_number)
+            .map((s: TaskStepRow) => ({
+              id: s.id,
+              title: s.title,
+              instruction: s.instructions,
+              codeRef: s.code_reference ?? null,
+              checkMyWork: s.check_my_work ?? false,
+            })),
+          tips: data.tips ?? [],
+          commonMistakes: data.common_mistakes ?? [],
+          codeRefs: data.code_refs ?? [],
+        });
+      }
+      setLoading(false);
+    }
+    fetchTask();
+  }, [id]);
+
+  if (loading || !task) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#F59E0B" />
+      </SafeAreaView>
+    );
+  }
+
   const step = task.steps[currentStep];
-  const progress = completedSteps.size / task.steps.length;
+  const progress = task.steps.length > 0 ? completedSteps.size / task.steps.length : 0;
 
   const handleStepComplete = () => {
     const newCompleted = new Set(completedSteps);
@@ -120,11 +116,8 @@ export default function TaskDetailScreen() {
     if (currentStep < task.steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      Alert.alert(
-        'Task Complete!',
-        'You finished all steps. Great work!',
-        [{ text: 'Done', onPress: () => router.back() }]
-      );
+      showToast('You finished all steps. Great work!', 'success');
+      router.back();
     }
   };
 
@@ -162,12 +155,12 @@ export default function TaskDetailScreen() {
           borderBottomColor: '#3A3A3C',
         }}
       >
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale haptic="light" accessibilityRole="button"
           onPress={() => router.back()}
           style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
         >
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        </PressableScale>
         <View style={{ flex: 1, marginLeft: 8 }}>
           <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }} numberOfLines={1}>
             {task.title}
@@ -191,9 +184,9 @@ export default function TaskDetailScreen() {
             </View>
           </View>
         </View>
-        <TouchableOpacity accessibilityRole="button" onPress={handleStartSession}>
+        <PressableScale haptic="light" accessibilityRole="button" onPress={handleStartSession}>
           <Ionicons name="camera" size={24} color="#E8711A" />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {/* Progress Bar */}
@@ -227,7 +220,7 @@ export default function TaskDetailScreen() {
         }}
       >
         {TABS.map((tab) => (
-          <TouchableOpacity accessibilityRole="button"
+          <PressableScale haptic="light" accessibilityRole="button"
             key={tab.id}
             onPress={() => setActiveTab(tab.id)}
             style={{
@@ -249,7 +242,7 @@ export default function TaskDetailScreen() {
             >
               {tab.label}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         ))}
       </View>
 
@@ -305,7 +298,7 @@ export default function TaskDetailScreen() {
                 const isCompleted = completedSteps.has(i);
                 const isCurrent = i === currentStep;
                 return (
-                  <TouchableOpacity accessibilityRole="button"
+                  <PressableScale haptic="light" accessibilityRole="button"
                     key={i}
                     onPress={() => setCurrentStep(i)}
                     style={{
@@ -336,7 +329,7 @@ export default function TaskDetailScreen() {
                         {i + 1}
                       </Text>
                     )}
-                  </TouchableOpacity>
+                  </PressableScale>
                 );
               })}
             </ScrollView>
@@ -393,7 +386,7 @@ export default function TaskDetailScreen() {
               )}
 
               {step.checkMyWork && (
-                <TouchableOpacity accessibilityRole="button"
+                <PressableScale haptic="medium" accessibilityRole="button"
                   onPress={handleCheckMyWork}
                   style={{
                     backgroundColor: 'rgba(58, 80, 107, 0.3)',
@@ -412,7 +405,7 @@ export default function TaskDetailScreen() {
                   <Text style={{ color: '#8E8E93', fontSize: 15, fontWeight: '600' }}>
                     Check My Work (AI Camera)
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               )}
             </View>
           </>
@@ -537,7 +530,7 @@ export default function TaskDetailScreen() {
             borderTopColor: '#3A3A3C',
           }}
         >
-          <TouchableOpacity accessibilityRole="button"
+          <PressableScale haptic="medium" accessibilityRole="button"
             onPress={handleStepComplete}
             style={{
               backgroundColor: completedSteps.has(currentStep) ? '#2D8A4E' : '#E8711A',
@@ -568,9 +561,10 @@ export default function TaskDetailScreen() {
                 ? 'Mark Complete & Next'
                 : 'Complete Task'}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
+      <Toast {...toast} onHide={hideToast} />
     </SafeAreaView>
   );
 }

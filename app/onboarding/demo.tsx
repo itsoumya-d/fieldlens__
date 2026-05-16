@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { View, Text, Animated, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth';
+import PressableScale from '@/components/PressableScale';
 
 const { width } = Dimensions.get('window');
 
@@ -235,8 +236,10 @@ export default function DemoScreen() {
       {/* Bottom CTAs */}
       <View className="px-6 pb-6 gap-3">
         <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-          <TouchableOpacity accessibilityRole="button"
+          <PressableScale
+            accessibilityRole="button"
             onPress={handleGetStarted}
+            haptic="medium"
             style={{
               backgroundColor: '#E8711A',
               paddingVertical: 16,
@@ -256,14 +259,19 @@ export default function DemoScreen() {
             <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '700' }}>
               Try It Now — It's Free
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
         </Animated.View>
 
-        <TouchableOpacity accessibilityRole="button" onPress={handleSkip} style={{ alignItems: 'center', paddingVertical: 12 }}>
+        <PressableScale
+          accessibilityRole="button"
+          onPress={handleSkip}
+          haptic="light"
+          style={{ alignItems: 'center', paddingVertical: 12 }}
+        >
           <Text style={{ color: '#8E8E93', fontSize: 15, fontWeight: '500' }}>
             I'll explore on my own
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </Animated.View>
   );

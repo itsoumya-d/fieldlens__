@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  Pressable,
-  TouchableOpacity,
   ScrollView,
   Dimensions,
   StyleSheet,
@@ -13,6 +11,8 @@ import {
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
+import * as Haptics from 'expo-haptics';
+import PressableScale from '@/components/PressableScale';
 
 const { width } = Dimensions.get('window');
 
@@ -72,7 +72,6 @@ export default function Onboarding() {
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(1 / slides.length)).current;
 
@@ -141,9 +140,9 @@ export default function Onboarding() {
         <Animated.View style={[styles.progressFill, { width: progressWidth }]} />
       </View>
       {!isLast && (
-        <Pressable style={styles.skipBtn} onPress={handleSkip}>
+        <PressableScale haptic="light" style={styles.skipBtn} onPress={handleSkip}>
           <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
-        </Pressable>
+        </PressableScale>
       )}
       <Animated.View
         style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
@@ -166,17 +165,21 @@ export default function Onboarding() {
             {PERSONALIZATION_OPTIONS.map((option) => {
               const isSelected = selectedType === option;
               return (
-                <TouchableOpacity
+                <PressableScale
                   key={option}
+                  haptic="none"
+                  scale={0.97}
                   style={[styles.optionChip, isSelected && styles.optionChipSelected]}
-                  onPress={() => setSelectedType(option)}
-                  activeOpacity={0.8}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedType(option);
+                  }}
                 >
                   {isSelected && <Text style={styles.optionCheck}>✓ </Text>}
                   <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
                     {option}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               );
             })}
           </ScrollView>
@@ -201,34 +204,19 @@ export default function Onboarding() {
           },
         ]}
       >
-        <Pressable
+        <PressableScale
+          haptic="medium"
           style={[
             styles.button,
             isLast && { backgroundColor: canProceed ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.3)' },
           ]}
           onPress={handleNext}
           disabled={!canProceed}
-          onPressIn={() =>
-            Animated.spring(scaleAnim, {
-              toValue: 0.97,
-              useNativeDriver: true,
-              tension: 200,
-              friction: 10,
-            }).start()
-          }
-          onPressOut={() =>
-            Animated.spring(scaleAnim, {
-              toValue: 1,
-              useNativeDriver: true,
-              tension: 200,
-              friction: 10,
-            }).start()
-          }
         >
           <Text style={[styles.buttonText, isLast && canProceed && { color: slide.bg }]}>
             {isLast ? `🚀  ${t('onboarding.getStarted')}` : `${t('onboarding.continue')} \u2192`}
           </Text>
-        </Pressable>
+        </PressableScale>
       </Animated.View>
       <Text style={styles.stepCounter}>
         {t('onboarding.stepOf', { current: current + 1, total: slides.length })}

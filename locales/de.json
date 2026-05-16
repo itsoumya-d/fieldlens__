@@ -37,7 +37,14 @@
     "improvement": "Vorschlag",
     "safety": "Sicherheitswarnung",
     "tipOfDay": "Tipp des Tages",
-    "noFeedback": "Richten Sie Ihre Kamera auf Ihre Arbeit, um KI-Feedback zu erhalten"
+    "noFeedback": "Richten Sie Ihre Kamera auf Ihre Arbeit, um KI-Feedback zu erhalten",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "Aufgabenbibliothek",
@@ -58,7 +65,18 @@
     "steps": "Schritte",
     "startTask": "Aufgabe starten",
     "noTasks": "Keine Aufgaben gefunden",
-    "savedTasks": "Gespeicherte Aufgaben"
+    "savedTasks": "Gespeicherte Aufgaben",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "Mein Fortschritt",
@@ -74,7 +92,12 @@
     "monthly": "Diesen Monat",
     "allTime": "Gesamtzeit",
     "noProgress": "Schließen Sie Ihre erste Sitzung ab, um Fortschritte zu sehen",
-    "certifications": "Zertifizierungen"
+    "certifications": "Zertifizierungen",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "Einstellungen",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

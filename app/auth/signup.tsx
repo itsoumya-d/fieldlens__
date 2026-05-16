@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
   ActivityIndicator, StyleSheet, Animated,
 } from 'react-native';
 import { router, Link } from 'expo-router';
+import PressableScale from '@/components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -91,9 +92,9 @@ export default function SignupScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <TouchableOpacity accessibilityRole="button" onPress={() => router.back()} style={styles.backBtn}>
+          <PressableScale haptic="light" accessibilityRole="button" onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={24} color="#374151" />
-          </TouchableOpacity>
+          </PressableScale>
 
           <Animated.View style={[styles.logoBox, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}>
             <Ionicons name="flash" size={32} color="#fff" />
@@ -102,15 +103,15 @@ export default function SignupScreen() {
           <Text style={styles.title}>{t('auth.signUp')}</Text>
           <Text style={styles.subtitle}>{t('auth.join', { app: APP_NAME })}</Text>
 
-          <TouchableOpacity accessibilityRole="button" style={[styles.appleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleApple} disabled={socialDisabled}>
+          <PressableScale haptic="light" accessibilityRole="button" style={[styles.appleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleApple} disabled={socialDisabled}>
             {appleLoading ? <ActivityIndicator color="#000" /> : <Ionicons name="logo-apple" size={20} color="#000" />}
             <Text style={styles.appleBtnText}>{appleLoading ? t('auth.signingUp') : t('auth.signUpWithApple')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity accessibilityRole="button" style={[styles.googleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialDisabled}>
+          <PressableScale haptic="light" accessibilityRole="button" style={[styles.googleBtn, socialDisabled && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialDisabled}>
             {googleLoading ? <ActivityIndicator color={PRIMARY} /> : <Text style={styles.googleIcon}>G</Text>}
             <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{googleLoading ? t('auth.signingUp') : t('auth.signUpWithGoogle')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
           <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.orSignUpWithEmail')}</Text><View style={styles.dividerLine} /></View>
 
@@ -119,9 +120,9 @@ export default function SignupScreen() {
 
           <View style={styles.pwRow}>
             <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Password (min 8 chars)" placeholderTextColor="#9CA3AF" value={password} onChangeText={v => { setPassword(v); setError(''); }} secureTextEntry={!showPw} />
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={showPw ? "Hide password" : "Show password"} onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
+            <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel={showPw ? "Hide password" : "Show password"} onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
               <Ionicons name={showPw ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
           <TextInput style={[styles.input, { marginTop: 12 }]} placeholder="Confirm password" placeholderTextColor="#9CA3AF" value={confirm} onChangeText={v => { setConfirm(v); setError(''); }} secureTextEntry />
 
@@ -129,15 +130,15 @@ export default function SignupScreen() {
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
           </Animated.View>
 
-          <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }, loading && { opacity: 0.7 }]} onPress={handleSignUp} disabled={loading}>
+          <PressableScale haptic="medium" accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }, loading && { opacity: 0.7 }]} onPress={handleSignUp} disabled={loading}>
             {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.signUp')}</Text>}
-          </TouchableOpacity>
+          </PressableScale>
 
           <Text style={styles.terms}>{t('auth.agreeToTerms')}</Text>
 
           <View style={styles.loginRow}>
             <Text style={styles.loginText}>{t('auth.alreadyHaveAccount')}</Text>
-            <Link href="/auth/login" asChild><TouchableOpacity><Text style={[styles.loginLink, { color: PRIMARY }]}>{t('auth.signIn')}</Text></TouchableOpacity></Link>
+            <Link href="/auth/login" asChild><PressableScale haptic="light"><Text style={[styles.loginLink, { color: PRIMARY }]}>{t('auth.signIn')}</Text></PressableScale></Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

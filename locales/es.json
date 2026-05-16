@@ -21,6 +21,16 @@
     "activeJob": "Trabajo activo",
     "selectJob": "Seleccionar obra"
   },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
+  },
   "camera": {
     "title": "Entrenador IA con cámara",
     "startSession": "Iniciar sesión de entrenamiento",
@@ -37,7 +47,14 @@
     "improvement": "Sugerencia",
     "safety": "Alerta de seguridad",
     "tipOfDay": "Consejo del día",
-    "noFeedback": "Apunta tu cámara a tu trabajo para obtener retroalimentación de IA"
+    "noFeedback": "Apunta tu cámara a tu trabajo para obtener retroalimentación de IA",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "Biblioteca de tareas",
@@ -58,7 +75,18 @@
     "steps": "Pasos",
     "startTask": "Iniciar tarea",
     "noTasks": "No se encontraron tareas",
-    "savedTasks": "Tareas guardadas"
+    "savedTasks": "Tareas guardadas",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "Mi progreso",
@@ -74,7 +102,12 @@
     "monthly": "Este mes",
     "allTime": "Todo el tiempo",
     "noProgress": "Completa tu primera sesión para ver el progreso",
-    "certifications": "Certificaciones"
+    "certifications": "Certificaciones",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "Ajustes",

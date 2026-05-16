@@ -37,7 +37,14 @@
     "improvement": "Suggestion",
     "safety": "Alerte de sécurité",
     "tipOfDay": "Conseil du jour",
-    "noFeedback": "Dirigez votre caméra vers votre travail pour obtenir des retours IA"
+    "noFeedback": "Dirigez votre caméra vers votre travail pour obtenir des retours IA",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "Bibliothèque de tâches",
@@ -58,7 +65,18 @@
     "steps": "Étapes",
     "startTask": "Démarrer la tâche",
     "noTasks": "Aucune tâche trouvée",
-    "savedTasks": "Tâches sauvegardées"
+    "savedTasks": "Tâches sauvegardées",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "Ma progression",
@@ -74,7 +92,12 @@
     "monthly": "Ce mois",
     "allTime": "Tout le temps",
     "noProgress": "Terminez votre première session pour voir votre progression",
-    "certifications": "Certifications"
+    "certifications": "Certifications",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "Paramètres",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

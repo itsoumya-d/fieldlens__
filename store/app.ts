@@ -4,6 +4,7 @@ interface TaskSession {
   id: string;
   taskId: string;
   taskTitle: string;
+  trade?: string;
   currentStep: number;
   totalSteps: number;
   startedAt: Date;

@@ -47,6 +47,16 @@
     "now": "NOW",
     "freeAnalysis": "Free Analysis"
   },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
+  },
   "camera": {
     "title": "AI Camera Coach",
     "startSession": "Start Coaching Session",
@@ -76,7 +86,14 @@
     "analysisFailed": "Analysis Failed",
     "couldNotAnalyze": "Could not analyze the image. Please try again.",
     "dismiss": "Dismiss",
-    "analyzeAgain": "Analyze Again"
+    "analyzeAgain": "Analyze Again",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "Task Library",
@@ -102,10 +119,21 @@
     "tasksCount": "{{count}} tasks",
     "taskCount": "{{count}} task",
     "inCategory": "in {{category}}",
-    "libraryEmpty": "Library empty",
-    "completedTasksAppear": "Your completed tasks will appear here",
+    "libraryEmpty": "No tasks yet",
+    "completedTasksAppear": "Browse the task library to find field guides for your trade.",
     "clearFilters": "Clear Filters",
-    "pro": "Pro"
+    "pro": "Pro",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "My Progress",
@@ -134,7 +162,12 @@
     "achievements": "Achievements",
     "checks": "{{count}} checks",
     "caught": "{{count}} caught",
-    "thisWeekCount": "+{{count}} this week"
+    "thisWeekCount": "+{{count}} this week",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "Settings",
@@ -259,6 +292,15 @@
     "legalText": "Cancel anytime. Payment charged to Apple ID / Google Play. Auto-renews unless cancelled 24h before period ends.",
     "headline": "Your AI Field Assistant",
     "subhead": "Hands-free AI guidance, trade guides, and job documentation."
+  },
+  "aiCoach": {
+    "greeting": "Good morning",
+    "focusTip": "Focus Tip",
+    "safetyReminder": "Safety",
+    "challengeOfDay": "Challenge",
+    "xpOpportunity": "XP Opportunity",
+    "loading": "Loading your daily briefing...",
+    "tapToExpand": "Tap to see your full briefing"
   },
   "common": {
     "save": "Save",

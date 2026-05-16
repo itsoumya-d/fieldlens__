@@ -37,7 +37,14 @@
     "improvement": "सुझाव",
     "safety": "सुरक्षा चेतावनी",
     "tipOfDay": "दिन की टिप",
-    "noFeedback": "AI प्रतिक्रिया पाने के लिए अपना कैमरा काम पर लगाएं"
+    "noFeedback": "AI प्रतिक्रिया पाने के लिए अपना कैमरा काम पर लगाएं",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "कार्य लाइब्रेरी",
@@ -58,7 +65,18 @@
     "steps": "चरण",
     "startTask": "कार्य शुरू करें",
     "noTasks": "कोई कार्य नहीं मिला",
-    "savedTasks": "सहेजे गए कार्य"
+    "savedTasks": "सहेजे गए कार्य",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "मेरी प्रगति",
@@ -74,7 +92,12 @@
     "monthly": "इस महीने",
     "allTime": "सब समय",
     "noProgress": "प्रगति देखने के लिए पहला सत्र पूरा करें",
-    "certifications": "प्रमाणपत्र"
+    "certifications": "प्रमाणपत्र",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

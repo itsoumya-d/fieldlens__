@@ -37,7 +37,14 @@
     "improvement": "建议",
     "safety": "安全警报",
     "tipOfDay": "今日提示",
-    "noFeedback": "将相机对准您的工作以获取AI反馈"
+    "noFeedback": "将相机对准您的工作以获取AI反馈",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "任务库",
@@ -58,7 +65,18 @@
     "steps": "步骤",
     "startTask": "开始任务",
     "noTasks": "未找到任务",
-    "savedTasks": "已保存任务"
+    "savedTasks": "已保存任务",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "我的进度",
@@ -74,7 +92,12 @@
     "monthly": "本月",
     "allTime": "全部时间",
     "noProgress": "完成第一个会话即可查看进度",
-    "certifications": "证书"
+    "certifications": "证书",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "设置",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

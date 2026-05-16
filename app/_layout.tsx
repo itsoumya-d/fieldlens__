@@ -1,8 +1,6 @@
 import '@/lib/i18n'; // Initialize i18n before anything else
-import { initSentry } from '@/lib/sentry';
-initSentry();
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Text, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { Linking, Platform, Text, useColorScheme, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { isBiometricEnabled, authenticateWithBiometrics } from '@/lib/biometrics';
 import { Stack, useRouter } from 'expo-router';
@@ -16,7 +14,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/auth';
 import OfflineBanner from '@/components/OfflineBanner';
+import ErrorBoundary from '@/components/ErrorBoundary';
+import { initSentry } from '@/lib/sentry';
+import PressableScale from '@/components/PressableScale';
 import '../global.css';
+
+initSentry();
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,6 +28,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -152,15 +157,16 @@ export default function RootLayout() {
           <Text className="text-sm text-gray-500 dark:text-gray-400 text-center">
             Authenticate to continue
           </Text>
-          <TouchableOpacity
+          <PressableScale
+            haptic="medium"
             onPress={async () => {
               const success = await authenticateWithBiometrics('Authenticate to access the app');
               if (success) setBiometricLocked(false);
             }}
-            className="mt-2 px-6 py-3 rounded-xl bg-[#6366F1] active:opacity-80"
+            className="mt-2 px-6 py-3 rounded-xl bg-[#6366F1]"
           >
             <Text className="text-white font-semibold text-base">Unlock</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
     );
@@ -219,6 +225,7 @@ export default function RootLayout() {
   }
 
   return (
+    <ErrorBoundary>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View className={`flex-1 ${colorScheme === 'dark' ? 'dark' : ''}`}>
         <OfflineBanner />
@@ -231,5 +238,6 @@ export default function RootLayout() {
         </Stack>
       </View>
     </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

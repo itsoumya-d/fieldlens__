@@ -37,7 +37,14 @@
     "improvement": "제안",
     "safety": "안전 경고",
     "tipOfDay": "오늘의 팁",
-    "noFeedback": "AI 피드백을 받으려면 카메라를 작업에 향하세요"
+    "noFeedback": "AI 피드백을 받으려면 카메라를 작업에 향하세요",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "작업 라이브러리",
@@ -58,7 +65,18 @@
     "steps": "단계",
     "startTask": "작업 시작",
     "noTasks": "작업을 찾을 수 없습니다",
-    "savedTasks": "저장된 작업"
+    "savedTasks": "저장된 작업",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "내 진행 상황",
@@ -74,7 +92,12 @@
     "monthly": "이번 달",
     "allTime": "전체",
     "noProgress": "첫 번째 세션을 완료하여 진행 상황을 확인하세요",
-    "certifications": "자격증"
+    "certifications": "자격증",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "설정",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

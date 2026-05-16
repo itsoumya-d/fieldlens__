@@ -1,8 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Animated,
   Dimensions,
   Platform,
@@ -10,16 +9,22 @@ import {
   ActivityIndicator,
   type ViewStyle,
 } from 'react-native';
+import PressableScale from '@/components/PressableScale';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 import { CameraView, useCameraPermissions, CameraType } from 'expo-camera';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import NetInfo from '@react-native-community/netinfo';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useAppStore } from '@/store/app';
-import { analyzeImage } from '@/lib/api';
+import { analyzeImage, addUserXP, unlockAchievement, getUserXP, getAllAchievements, getUserUnlockedAchievements } from '@/lib/api';
+import { compressToBase64 } from '@/lib/imageUtils';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { triggerReview } from '@/lib/review';
+import * as Speech from 'expo-speech';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,19 +34,88 @@ interface Assessment {
   result: AssessmentResult;
   message: string;
   details: string[];
-  codeReference?: string;
-  recommendation?: string;
+  codeReference?: string | null;
+  recommendation?: string | null;
 }
 
 const resultConfig = {
-  correct: { color: '#2D8A4E', bgColor: 'rgba(45, 138, 78, 0.15)', icon: 'checkmark-circle' as const, label: 'Looks Good' },
-  warning: { color: '#F9A825', bgColor: 'rgba(249, 168, 37, 0.15)', icon: 'warning' as const, label: 'Check This' },
-  error: { color: '#D32F2F', bgColor: 'rgba(211, 47, 47, 0.15)', icon: 'close-circle' as const, label: 'Issue Found' },
-  unclear: { color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.15)', icon: 'help-circle' as const, label: 'Unclear' },
+  correct: { color: '#2D8A4E', bgColor: 'rgba(45, 138, 78, 0.15)', icon: 'checkmark-circle' as const, labelKey: 'camera.resultLooksGood' },
+  warning: { color: '#F9A825', bgColor: 'rgba(249, 168, 37, 0.15)', icon: 'warning' as const, labelKey: 'camera.resultCheckThis' },
+  error: { color: '#D32F2F', bgColor: 'rgba(211, 47, 47, 0.15)', icon: 'close-circle' as const, labelKey: 'camera.resultIssueFound' },
+  unclear: { color: '#8E8E93', bgColor: 'rgba(142, 142, 147, 0.15)', icon: 'help-circle' as const, labelKey: 'camera.resultUnclear' },
 };
+
+// Offline fallback for when network is unavailable (Task 9)
+const OFFLINE_RESULT = {
+  result: 'unclear' as const,
+  message: 'Offline — manual review required',
+  details: [
+    'No network connection detected.',
+    'AI analysis requires an internet connection.',
+    'Review your work manually using the task guide steps.',
+  ],
+  codeReference: null,
+  recommendation: 'Connect to the internet to use AI analysis, or continue following the step-by-step guide.',
+};
+
+// XP milestone achievement keys (matching the achievements table)
+const ACHIEVEMENT_KEYS = {
+  FIRST_CHECK: 'first_check',
+  TEN_CHECKS: 'ten_checks',
+  FIFTY_CHECKS: 'fifty_checks',
+  LEVEL_5: 'level_5',
+  STREAK_7: 'streak_7',
+};
+
+async function awardXPAndCheckAchievements(userId: string, xpAmount: number) {
+  try {
+    await addUserXP(userId, xpAmount);
+    const { data: xpRow } = await getUserXP(userId);
+    if (!xpRow) return;
+
+    // Check achievement unlocks
+    const { data: allAch } = await getAllAchievements();
+    const { data: unlockedAch } = await getUserUnlockedAchievements(userId);
+    const unlockedKeys = new Set((unlockedAch ?? []).map((u: { achievement_key: string }) => u.achievement_key));
+
+    const candidates = (allAch ?? []).filter((a: { key: string }) => !unlockedKeys.has(a.key));
+    for (const ach of candidates) {
+      let shouldUnlock = false;
+      switch (ach.key) {
+        case ACHIEVEMENT_KEYS.FIRST_CHECK:
+          shouldUnlock = (xpRow.total_xp ?? 0) >= 10;
+          break;
+        case ACHIEVEMENT_KEYS.TEN_CHECKS:
+          shouldUnlock = (xpRow.total_xp ?? 0) >= 100;
+          break;
+        case ACHIEVEMENT_KEYS.FIFTY_CHECKS:
+          shouldUnlock = (xpRow.total_xp ?? 0) >= 500;
+          break;
+        case ACHIEVEMENT_KEYS.LEVEL_5:
+          shouldUnlock = (xpRow.level ?? 1) >= 5;
+          break;
+        case ACHIEVEMENT_KEYS.STREAK_7:
+          shouldUnlock = (xpRow.streak_days ?? 0) >= 7;
+          break;
+      }
+      if (shouldUnlock) {
+        unlockAchievement(userId, ach.key).catch(() => {});
+      }
+    }
+  } catch {
+    // Non-critical — don't surface XP errors to user
+  }
+}
 
 export default function CameraScreen() {
   const { t } = useTranslation();
+  const { toast, showToast, hideToast } = useToast();
+  // Task 6: guided mode params from library detail screen
+  const { guideTitle, stepTitle, stepIndex } = useLocalSearchParams<{
+    guideTitle?: string;
+    stepTitle?: string;
+    stepIndex?: string;
+  }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<'on' | 'off'>('off');
@@ -54,6 +128,7 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
 
   const { analysisCount, dailyLimit, incrementAnalysis, activeSession } = useAppStore();
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   useEffect(() => {
     if (showOverlay) {
@@ -79,7 +154,7 @@ export default function CameraScreen() {
         t('camera.upgradeForUnlimited'),
         [
           { text: t('camera.maybeLater'), style: 'cancel' },
-          { text: t('camera.upgrade'), onPress: () => {} },
+          { text: t('camera.upgrade'), onPress: () => router.push('/(auth)/paywall') },
         ]
       );
       return;
@@ -93,21 +168,30 @@ export default function CameraScreen() {
     setShowOverlay(false);
 
     try {
-      // Take a real photo with base64 encoding for Vision API
+      // Task 9: Offline fallback — check connectivity before calling AI
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        setAssessment(OFFLINE_RESULT);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        return;
+      }
+
+      // Take a full-quality photo then compress before sending to the Vision API
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.7,
-        base64: true,
+        quality: 1,
+        base64: false,
         skipProcessing: false,
       });
 
-      if (!photo?.base64) throw new Error('No image data captured');
+      if (!photo?.uri) throw new Error('No image data captured');
+      const base64 = await compressToBase64(photo.uri);
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       // Call real GPT-4o Vision analysis
-      const result = await analyzeImage(user.id, photo.base64, activeSession?.trade ?? 'general');
+      const result = await analyzeImage(user.id, base64, activeSession?.trade ?? 'general');
 
       setAssessment(result);
 
@@ -121,20 +205,35 @@ export default function CameraScreen() {
         details: result.details,
         code_reference: result.codeReference ?? null,
         recommendation: result.recommendation ?? null,
-      }).then(() => {}).catch(() => {});
+      }).then(undefined, () => {});
 
       incrementAnalysis();
       triggerReview();
 
       if (result.result === 'correct') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Award XP: 10 for correct, 5 for warning
+        awardXPAndCheckAchievements(user.id, 10);
+      } else if (result.result === 'warning') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        awardXPAndCheckAchievements(user.id, 5);
       } else if (result.result === 'error') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       }
+
+      // Voice feedback (Task 5)
+      if (voiceEnabled) {
+        const prefix =
+          result.result === 'correct' ? 'Looks good. ' :
+          result.result === 'error'   ? 'Issue found. ' :
+          result.result === 'warning' ? 'Check this. ' : '';
+        const spoken = `${prefix}${result.message}${result.recommendation ? '. ' + result.recommendation : ''}`;
+        Speech.speak(spoken, { rate: 0.95, pitch: 1.0 });
+      }
     } catch (err) {
-      Alert.alert(t('camera.analysisFailed'), t('camera.couldNotAnalyze'));
+      showToast(t('camera.couldNotAnalyze'), 'error');
     } finally {
       setIsAnalyzing(false);
       setShowOverlay(true);
@@ -178,7 +277,7 @@ export default function CameraScreen() {
         <Text style={{ fontSize: 15, color: '#8E8E93', textAlign: 'center', lineHeight: 22, marginBottom: 32 }}>
           {t('camera.cameraPermissionDesc')}
         </Text>
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale haptic="medium" accessibilityRole="button"
           onPress={requestPermission}
           style={{
             backgroundColor: '#E8711A',
@@ -193,7 +292,7 @@ export default function CameraScreen() {
           }}
         >
           <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>{t('camera.grantPermission')}</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -225,7 +324,7 @@ export default function CameraScreen() {
             }}
           >
             {/* Back button */}
-            <TouchableOpacity accessibilityRole="button"
+            <PressableScale haptic="light" accessibilityRole="button"
               onPress={() => router.back()}
               style={{
                 width: 40,
@@ -239,7 +338,7 @@ export default function CameraScreen() {
               }}
             >
               <Ionicons name="chevron-down" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
+            </PressableScale>
 
             {/* Task indicator */}
             <View
@@ -277,6 +376,31 @@ export default function CameraScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Task 6: Guided mode — step context banner */}
+          {guideTitle && stepTitle && (
+            <View
+              style={{
+                marginHorizontal: 16,
+                marginBottom: 8,
+                backgroundColor: 'rgba(0, 0, 0, 0.72)',
+                borderRadius: 14,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: 'rgba(232, 113, 26, 0.4)',
+                gap: 4,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Ionicons name="book-outline" size={14} color="#E8711A" />
+                <Text style={{ color: '#E8711A', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                  {guideTitle}{stepIndex ? ` · Step ${stepIndex}` : ''}
+                </Text>
+              </View>
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }} numberOfLines={2}>{stepTitle}</Text>
+              <Text style={{ color: '#8E8E93', fontSize: 12 }}>Point camera at your work to verify this step</Text>
+            </View>
+          )}
 
           {/* Viewfinder corners */}
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -341,7 +465,7 @@ export default function CameraScreen() {
               }}
             >
               {/* Flash toggle */}
-              <TouchableOpacity accessibilityRole="button"
+              <PressableScale haptic="light" accessibilityRole="button"
                 onPress={() => setFlash(flash === 'on' ? 'off' : 'on')}
                 style={{
                   width: 52,
@@ -355,10 +479,10 @@ export default function CameraScreen() {
                 }}
               >
                 <Ionicons name={flash === 'on' ? 'flash' : 'flash-off'} size={24} color={flash === 'on' ? '#F9A825' : '#FFFFFF'} />
-              </TouchableOpacity>
+              </PressableScale>
 
               {/* Capture button */}
-              <TouchableOpacity accessibilityRole="button"
+              <PressableScale haptic="medium" accessibilityRole="button"
                 onPress={handleCapture}
                 disabled={isAnalyzing}
                 style={{
@@ -382,24 +506,24 @@ export default function CameraScreen() {
                 ) : (
                   <Ionicons name="scan" size={32} color="#FFFFFF" />
                 )}
-              </TouchableOpacity>
+              </PressableScale>
 
-              {/* Flip camera */}
-              <TouchableOpacity accessibilityRole="button"
-                onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+              {/* Voice toggle */}
+              <PressableScale haptic="light" accessibilityRole="button"
+                onPress={() => { Speech.stop(); setVoiceEnabled((v) => !v); }}
                 style={{
                   width: 52,
                   height: 52,
                   borderRadius: 26,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  backgroundColor: voiceEnabled ? 'rgba(45, 138, 78, 0.3)' : 'rgba(0, 0, 0, 0.5)',
                   alignItems: 'center',
                   justifyContent: 'center',
                   borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  borderColor: voiceEnabled ? '#2D8A4E' : 'rgba(255, 255, 255, 0.2)',
                 }}
               >
-                <Ionicons name="camera-reverse-outline" size={24} color="#FFFFFF" />
-              </TouchableOpacity>
+                <Ionicons name={voiceEnabled ? 'volume-high' : 'volume-mute'} size={24} color={voiceEnabled ? '#2D8A4E' : '#FFFFFF'} />
+              </PressableScale>
             </View>
           </View>
         </SafeAreaView>
@@ -407,9 +531,8 @@ export default function CameraScreen() {
 
       {/* Assessment Overlay */}
       {showOverlay && assessment && (
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale haptic="light" accessibilityRole="button"
           style={{ position: 'absolute', inset: 0 }}
-          activeOpacity={1}
           onPress={handleDismiss}
         >
           <View style={{ flex: 1 }}>
@@ -478,7 +601,7 @@ export default function CameraScreen() {
                       marginBottom: 2,
                     }}
                   >
-                    {resultConfig[assessment.result].label}
+                    {t(resultConfig[assessment.result].labelKey)}
                   </Text>
                   <Text style={{ fontSize: 20, color: '#FFFFFF', fontWeight: '700' }}>
                     {assessment.message}
@@ -550,7 +673,7 @@ export default function CameraScreen() {
 
               {/* Action buttons */}
               <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity accessibilityRole="button"
+                <PressableScale haptic="light" accessibilityRole="button"
                   onPress={handleDismiss}
                   style={{
                     flex: 1,
@@ -563,8 +686,8 @@ export default function CameraScreen() {
                   }}
                 >
                   <Text style={{ color: '#EBEBF5', fontSize: 15, fontWeight: '600' }}>{t('camera.dismiss')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity accessibilityRole="button"
+                </PressableScale>
+                <PressableScale haptic="medium" accessibilityRole="button"
                   onPress={handleCapture}
                   style={{
                     flex: 2,
@@ -584,12 +707,13 @@ export default function CameraScreen() {
                 >
                   <Ionicons name="camera" size={18} color="#FFFFFF" />
                   <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>{t('camera.analyzeAgain')}</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             </Animated.View>
           </View>
-        </TouchableOpacity>
+        </PressableScale>
       )}
+      <Toast {...toast} onHide={hideToast} />
     </View>
   );
 }

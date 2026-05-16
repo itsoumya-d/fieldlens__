@@ -37,7 +37,14 @@
     "improvement": "Sugestão",
     "safety": "Alerta de segurança",
     "tipOfDay": "Dica do dia",
-    "noFeedback": "Aponte a câmera para seu trabalho para receber feedback da IA"
+    "noFeedback": "Aponte a câmera para seu trabalho para receber feedback da IA",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "Biblioteca de tarefas",
@@ -58,7 +65,18 @@
     "steps": "Passos",
     "startTask": "Iniciar tarefa",
     "noTasks": "Nenhuma tarefa encontrada",
-    "savedTasks": "Tarefas salvas"
+    "savedTasks": "Tarefas salvas",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "Meu progresso",
@@ -74,7 +92,12 @@
     "monthly": "Este mês",
     "allTime": "Todo o tempo",
     "noProgress": "Conclua sua primeira sessão para ver o progresso",
-    "certifications": "Certificações"
+    "certifications": "Certificações",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "Configurações",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

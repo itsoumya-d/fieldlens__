@@ -37,7 +37,14 @@
     "improvement": "اقتراح",
     "safety": "تنبيه أمان",
     "tipOfDay": "نصيحة اليوم",
-    "noFeedback": "وجّه كاميرتك نحو عملك للحصول على ملاحظات الذكاء الاصطناعي"
+    "noFeedback": "وجّه كاميرتك نحو عملك للحصول على ملاحظات الذكاء الاصطناعي",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "مكتبة المهام",
@@ -58,7 +65,18 @@
     "steps": "الخطوات",
     "startTask": "بدء المهمة",
     "noTasks": "لم يتم العثور على مهام",
-    "savedTasks": "المهام المحفوظة"
+    "savedTasks": "المهام المحفوظة",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "تقدمي",
@@ -74,7 +92,12 @@
     "monthly": "هذا الشهر",
     "allTime": "كل الوقت",
     "noProgress": "أكمل جلستك الأولى لمشاهدة التقدم",
-    "certifications": "الشهادات"
+    "certifications": "الشهادات",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "الإعدادات",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }

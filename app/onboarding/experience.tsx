@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/store/auth';
+import PressableScale from '@/components/PressableScale';
 
 type Level = 'apprentice' | 'journeyman' | 'master';
 
@@ -94,9 +95,11 @@ export default function ExperienceScreen() {
             const isSelected = selected === level.id;
 
             return (
-              <TouchableOpacity accessibilityRole="button"
+              <PressableScale
                 key={level.id}
+                accessibilityRole="button"
                 onPress={() => setSelected(level.id)}
+                haptic="light"
                 style={{
                   backgroundColor: isSelected ? `${level.accentColor}15` : '#2C2C2E',
                   borderRadius: 16,
@@ -181,7 +184,7 @@ export default function ExperienceScreen() {
                     <Ionicons name="checkmark" size={14} color="#FFFFFF" />
                   </View>
                 )}
-              </TouchableOpacity>
+              </PressableScale>
             );
           })}
         </View>
@@ -189,8 +192,10 @@ export default function ExperienceScreen() {
 
       {/* Continue button */}
       <View className="px-6 pb-6 pt-4">
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale
+          accessibilityRole="button"
           onPress={handleContinue}
+          haptic="medium"
           disabled={!selected}
           style={{
             backgroundColor: selected ? '#E8711A' : '#3A3A3C',
@@ -213,7 +218,7 @@ export default function ExperienceScreen() {
           >
             Continue
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </View>
   );

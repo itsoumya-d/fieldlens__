@@ -1,53 +1,68 @@
 import { Tabs } from 'expo-router';
-import { View, TouchableOpacity } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
+import AnimatedTabIcon from '@/components/AnimatedTabIcon';
 
 function CameraTabIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
     <View
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: focused ? '#E8711A' : '#2C2C2E',
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: focused ? '#2563EB' : '#1E293B',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 8,
-        shadowColor: focused ? '#E8711A' : 'transparent',
+        marginBottom: 6,
+        shadowColor: focused ? '#2563EB' : 'transparent',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.45,
         shadowRadius: 10,
         elevation: focused ? 8 : 0,
-        borderWidth: focused ? 0 : 2,
-        borderColor: '#3A3A3C',
+        borderWidth: focused ? 0 : 1.5,
+        borderColor: '#334155',
       }}
     >
-      <Ionicons name="camera" size={26} color={focused ? '#FFFFFF' : '#8E8E93'} />
+      <Ionicons name="camera" size={24} color={focused ? '#FFFFFF' : '#64748B'} />
     </View>
   );
 }
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   const { t } = useTranslation();
+
+  const activeColor = '#2563EB';
+  const bgColor = isDark ? '#0F172A' : '#FFFFFF';
+  const borderColor = isDark ? '#1E293B' : '#E5E7EB';
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#2C2C2E',
-          borderTopColor: '#38383A',
-          borderTopWidth: 1,
-          paddingBottom: 4,
-          height: 80,
+          backgroundColor: bgColor,
+          borderTopColor: borderColor,
+          borderTopWidth: 0.5,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingTop: 8,
+          height: Platform.OS === 'ios' ? 88 : 64,
+          elevation: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
         },
-        tabBarActiveTintColor: '#E8711A',
-        tabBarInactiveTintColor: '#8E8E93',
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: -2,
-        },
+        tabBarActiveTintColor: activeColor,
+        tabBarInactiveTintColor: isDark ? '#64748B' : '#94A3B8',
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600', letterSpacing: 0.2 },
+      }}
+      screenListeners={{
+        tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
       }}
     >
       <Tabs.Screen
@@ -55,7 +70,9 @@ export default function TabLayout() {
         options={{
           title: t('tabs.home'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+            <AnimatedTabIcon focused={focused} color={color}>
+              <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -64,7 +81,9 @@ export default function TabLayout() {
         options={{
           title: t('tabs.library'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'library' : 'library-outline'} size={24} color={color} />
+            <AnimatedTabIcon focused={focused} color={color}>
+              <Ionicons name={focused ? 'library' : 'library-outline'} size={24} color={color} />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -73,7 +92,9 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ color, focused }) => (
-            <CameraTabIcon color={color} focused={focused} />
+            <AnimatedTabIcon focused={focused} color={color}>
+              <CameraTabIcon color={color} focused={focused} />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -82,7 +103,9 @@ export default function TabLayout() {
         options={{
           title: t('tabs.progress'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={24} color={color} />
+            <AnimatedTabIcon focused={focused} color={color}>
+              <Ionicons name={focused ? 'bar-chart' : 'bar-chart-outline'} size={24} color={color} />
+            </AnimatedTabIcon>
           ),
         }}
       />
@@ -91,10 +114,14 @@ export default function TabLayout() {
         options={{
           title: t('tabs.settings'),
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={24} color={color} />
+            <AnimatedTabIcon focused={focused} color={color}>
+              <Ionicons name={focused ? 'person-circle' : 'person-circle-outline'} size={24} color={color} />
+            </AnimatedTabIcon>
           ),
         }}
       />
+      {/* Hidden tabs — accessible via stack navigation */}
+      <Tabs.Screen name="photos" options={{ href: null }} />
     </Tabs>
   );
 }

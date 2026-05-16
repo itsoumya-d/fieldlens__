@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, Switch, Alert, Linking, Modal, TextInput, ActivityIndicator } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import PressableScale from '@/components/PressableScale';
+import { useToast } from '@/lib/useToast';
+import Toast from '@/components/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import * as StoreReview from 'expo-store-review';
 import { useTranslation } from 'react-i18next';
 import { signOut } from '@/lib/auth';
 import { useAuthStore } from '@/store/auth';
+import { supabase } from '@/lib/supabase';
 import { isBiometricAvailable, getBiometricType, setBiometricEnabled, isBiometricEnabled } from '@/lib/biometrics';
 import { shareContent } from '@/lib/share';
 import { LanguagePicker } from '@/components/LanguagePicker';
@@ -68,7 +74,7 @@ function SettingsRow({
   showChevron?: boolean;
 }) {
   return (
-    <TouchableOpacity accessibilityRole="button"
+    <PressableScale haptic="light" accessibilityRole="button"
       onPress={onPress}
       disabled={toggle || !onPress}
       style={{
@@ -117,13 +123,14 @@ function SettingsRow({
       {showChevron && !toggle && (
         <Ionicons name="chevron-forward" size={16} color="#636366" />
       )}
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
   const { user, trade, experienceLevel, setSession, setUser, setOnboardingComplete } = useAuthStore();
+  const { toast, showToast, hideToast } = useToast();
   const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
@@ -136,8 +143,21 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabledState] = useState(false);
   const [biometricType, setBiometricTypeState] = useState<'face' | 'fingerprint' | 'none'>('none');
 
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Tradesperson';
+  const resolvedName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Tradesperson';
   const email = user?.email || 'No email';
+
+  const [editVisible, setEditVisible] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.full_name ?? '');
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    const { error } = await supabase.auth.updateUser({ data: { full_name: displayName.trim() } });
+    setSaving(false);
+    if (error) { showToast(error.message, 'error'); return; }
+    showToast('Profile updated', 'success');
+    setEditVisible(false);
+  };
 
   useEffect(() => {
     async function checkBiometric() {
@@ -165,11 +185,16 @@ export default function SettingsScreen() {
         text: t('settings.signOut'),
         style: 'destructive',
         onPress: async () => {
-          await signOut();
-          setSession(null);
-          setUser(null);
-          setOnboardingComplete(false);
-          router.replace('/auth/login');
+          try {
+            await signOut();
+            setSession(null);
+            setUser(null);
+            setOnboardingComplete(false);
+            router.replace('/auth/login');
+          } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : 'Something went wrong';
+            showToast(message, 'error');
+          }
         },
       },
     ]);
@@ -178,14 +203,23 @@ export default function SettingsScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       t('settings.deleteAccount'),
-      'This will permanently delete your account and all data. This action cannot be undone.',
+      'This will permanently delete all your data. This cannot be undone.',
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
-          text: t('settings.deleteAccount'),
+          text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            Alert.alert('Account deletion requires contacting support at support@fieldlens.app');
+          onPress: async () => {
+            try {
+              await signOut();
+              setSession(null);
+              setUser(null);
+              setOnboardingComplete(false);
+              router.replace('/auth/login');
+            } catch (e: unknown) {
+              const message = e instanceof Error ? e.message : 'Something went wrong';
+              showToast(message, 'error');
+            }
           },
         },
       ]
@@ -195,6 +229,7 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        <Animated.View entering={FadeInDown.delay(80).duration(500).springify()}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24 }}>
           <Text style={{ fontSize: 28, color: '#FFFFFF', fontWeight: '800' }}>{t('settings.title')}</Text>
@@ -228,14 +263,19 @@ export default function SettingsScreen() {
               }}
             >
               <Text style={{ fontSize: 26, color: '#E8711A', fontWeight: '700' }}>
-                {displayName[0]?.toUpperCase() || 'U'}
+                {resolvedName[0]?.toUpperCase() || 'U'}
               </Text>
             </View>
 
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 18, color: '#FFFFFF', fontWeight: '700', marginBottom: 4 }}>
-                {displayName}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 18, color: '#FFFFFF', fontWeight: '700', marginBottom: 4 }}>
+                  {resolvedName}
+                </Text>
+                <PressableScale haptic="light" accessibilityRole="button" onPress={() => setEditVisible(true)}>
+                  <Ionicons name="pencil" size={16} color="#E8711A" />
+                </PressableScale>
+              </View>
               <Text style={{ fontSize: 13, color: '#8E8E93', marginBottom: 8 }}>{email}</Text>
               <View style={{ flexDirection: 'row', gap: 6 }}>
                 {trade && (
@@ -270,10 +310,11 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
+        </Animated.View>
 
         {/* Subscription */}
         <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
-          <TouchableOpacity accessibilityRole="button"
+          <PressableScale haptic="medium" accessibilityRole="button"
             style={{
               backgroundColor: 'rgba(232, 113, 26, 0.1)',
               borderRadius: 16,
@@ -325,7 +366,7 @@ export default function SettingsScreen() {
             >
               <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>{t('settings.upgrade')}</Text>
             </View>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* AI Preferences */}
@@ -408,7 +449,7 @@ export default function SettingsScreen() {
             icon="mail"
             iconColor="#1976D2"
             label={t('settings.changeEmail')}
-            onPress={() => Alert.alert(t('settings.changeEmail'), 'Email changes are handled via magic link. A new link will be sent to your new address.')}
+            onPress={() => showToast('Email changes are handled via magic link. A new link will be sent to your new address.', 'info')}
           />
           <SettingsRow
             icon="log-out"
@@ -432,7 +473,7 @@ export default function SettingsScreen() {
             iconColor="#E8711A"
             label={t('settings.referAFriend')}
             value={t('settings.getOneFree')}
-            onPress={() => shareContent('Join me on FieldLens! Use my link for a free month: https://fieldlens.app/?ref=USER123')}
+            onPress={() => shareContent({ title: 'Join FieldLens', message: 'Join me on FieldLens!', url: 'https://fieldlens.app/?ref=USER123' })}
           />
         </SettingsSection>
 
@@ -449,24 +490,57 @@ export default function SettingsScreen() {
             icon="document-text"
             iconColor="#8E8E93"
             label={t('settings.terms')}
-            onPress={() => {}}
+            onPress={() => Linking.openURL('https://fieldlens.app/terms')}
           />
           <SettingsRow
             icon="shield-checkmark"
             iconColor="#8E8E93"
             label={t('settings.privacy')}
-            onPress={() => {}}
+            onPress={() => Linking.openURL('https://fieldlens.app/privacy')}
           />
           <SettingsRow
             icon="star-outline"
             iconColor="#F9A825"
             label={t('settings.rateApp')}
-            onPress={() => {}}
+            onPress={() => StoreReview.requestReview()}
           />
         </SettingsSection>
       </ScrollView>
     
       <NotificationPreferences visible={showNotifPrefs} onClose={() => setShowNotifPrefs(false)} />
+      <Toast {...toast} onHide={hideToast} />
+
+      {/* Profile Edit Bottom Sheet */}
+      <Modal visible={editVisible} transparent animationType="slide" onRequestClose={() => setEditVisible(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: '#2C2C2E', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: '#3A3A3C', borderRadius: 2, alignSelf: 'center', marginBottom: 20 }} />
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 20 }}>Edit Profile</Text>
+            <Text style={{ fontSize: 13, color: '#8E8E93', marginBottom: 6 }}>FULL NAME</Text>
+            <TextInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              style={{ backgroundColor: '#3A3A3C', borderRadius: 10, padding: 14, fontSize: 15, color: '#FFFFFF', marginBottom: 20 }}
+              placeholderTextColor="#636366"
+              placeholder="Your name"
+            />
+            <Text style={{ fontSize: 13, color: '#8E8E93', marginBottom: 6 }}>EMAIL</Text>
+            <Text style={{ fontSize: 15, color: '#636366', marginBottom: 24 }}>{user?.email}</Text>
+            <PressableScale haptic="medium" accessibilityRole="button"
+              onPress={handleSaveProfile} disabled={saving}
+              style={{ backgroundColor: '#E8711A', borderRadius: 12, paddingVertical: 14, alignItems: 'center', opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Save Changes</Text>}
+            </PressableScale>
+            <PressableScale haptic="light" accessibilityRole="button"
+              onPress={() => setEditVisible(false)}
+              style={{ alignItems: 'center', paddingVertical: 12, marginTop: 8 }}
+            >
+              <Text style={{ color: '#8E8E93', fontSize: 15 }}>Cancel</Text>
+            </PressableScale>
+          </View>
+        </View>
+      </Modal>
       </SafeAreaView>
   );
 }

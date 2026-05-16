@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput,
   KeyboardAvoidingView, Platform, ScrollView,
   ActivityIndicator, StyleSheet, Animated,
 } from 'react-native';
 import { router, Link } from 'expo-router';
+import PressableScale from '@/components/PressableScale';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -123,8 +124,8 @@ export default function LoginScreen() {
         if (authError) throw authError;
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (e: any) {
-      if (e.code !== 'ERR_REQUEST_CANCELED') showError('Apple Sign-In failed.');
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code !== 'ERR_REQUEST_CANCELED') showError('Apple Sign-In failed.');
     } finally { setSocialLoading(null); }
   };
 
@@ -153,20 +154,20 @@ export default function LoginScreen() {
             />
           )}
 
-          <TouchableOpacity accessibilityRole="button" style={[styles.googleBtn, socialLoading !== null && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialLoading !== null}>
+          <PressableScale haptic="light" accessibilityRole="button" style={[styles.googleBtn, socialLoading !== null && { opacity: 0.7 }]} onPress={handleGoogle} disabled={socialLoading !== null}>
             {socialLoading === 'google' ? <ActivityIndicator color={PRIMARY} /> : <Text style={styles.googleIcon}>G</Text>}
             <Text style={[styles.googleBtnText, { color: PRIMARY }]}>{socialLoading === 'google' ? t('auth.signingIn') : t('auth.continueWithGoogle')}</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
           <View style={styles.divider}><View style={styles.dividerLine} /><Text style={styles.dividerText}>{t('auth.or')}</Text><View style={styles.dividerLine} /></View>
 
           <View style={styles.tabRow}>
-            <TouchableOpacity accessibilityRole="button" style={[styles.tabBtn, tab === 'password' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('password'); setError(''); }}>
+            <PressableScale haptic="light" accessibilityRole="button" style={[styles.tabBtn, tab === 'password' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('password'); setError(''); }}>
               <Text style={[styles.tabText, tab === 'password' && { color: PRIMARY }]}>{t('auth.password')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity accessibilityRole="button" style={[styles.tabBtn, tab === 'magic' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('magic'); setError(''); }}>
+            </PressableScale>
+            <PressableScale haptic="light" accessibilityRole="button" style={[styles.tabBtn, tab === 'magic' && { borderBottomColor: PRIMARY, borderBottomWidth: 2 }]} onPress={() => { setTab('magic'); setError(''); }}>
               <Text style={[styles.tabText, tab === 'magic' && { color: PRIMARY }]}>{t('auth.magicLink')}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
           <TextInput style={styles.input} placeholder="Email address" placeholderTextColor="#9CA3AF" value={email} onChangeText={v => { setEmail(v); setError(''); }} keyboardType="email-address" autoCapitalize="none" />
@@ -175,43 +176,43 @@ export default function LoginScreen() {
             <>
               <View style={styles.pwRow}>
                 <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} placeholder="Password" placeholderTextColor="#9CA3AF" value={password} onChangeText={v => { setPassword(v); setError(''); }} secureTextEntry={!showPw} />
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel={showPw ? "Hide password" : "Show password"} onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
+                <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel={showPw ? "Hide password" : "Show password"} onPress={() => setShowPw(v => !v)} style={styles.eyeBtn}>
                   <Ionicons name={showPw ? 'eye-off' : 'eye'} size={20} color="#6B7280" />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
               <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </Animated.View>
-              <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/auth/forgot-password')} style={styles.forgotRow}>
+              <PressableScale haptic="light" accessibilityRole="button" onPress={() => router.push('/auth/forgot-password')} style={styles.forgotRow}>
                 <Text style={[styles.forgotText, { color: PRIMARY }]}>{t('auth.forgotPassword')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleSignIn} disabled={loading}>
+              </PressableScale>
+              <PressableScale haptic="medium" accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleSignIn} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.signIn')}</Text>}
-              </TouchableOpacity>
+              </PressableScale>
             </>
           ) : magicSent ? (
             <View style={styles.magicSentBox}>
               <Ionicons name="mail" size={40} color={PRIMARY} />
               <Text style={styles.magicSentTitle}>{t('auth.checkYourEmail')}</Text>
               <Text style={styles.magicSentText}>{t('auth.magicLinkSent', { email })}</Text>
-              <TouchableOpacity accessibilityRole="button" style={[styles.resendBtn, resendCountdown > 0 && { opacity: 0.5 }]} onPress={resendCountdown === 0 ? handleResendMagicLink : undefined} disabled={resendCountdown > 0 || loading}>
+              <PressableScale haptic="light" accessibilityRole="button" style={[styles.resendBtn, resendCountdown > 0 && { opacity: 0.5 }]} onPress={resendCountdown === 0 ? handleResendMagicLink : undefined} disabled={resendCountdown > 0 || loading}>
                 <Text style={[styles.resendBtnText, { color: PRIMARY }]}>{resendCountdown > 0 ? t('auth.resendIn', { count: resendCountdown }) : t('auth.resendNow')}</Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           ) : (
             <>
               <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
               </Animated.View>
-              <TouchableOpacity accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleMagicLink} disabled={loading}>
+              <PressableScale haptic="medium" accessibilityRole="button" style={[styles.primaryBtn, { backgroundColor: PRIMARY }]} onPress={handleMagicLink} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.sendMagicLink')}</Text>}
-              </TouchableOpacity>
+              </PressableScale>
             </>
           )}
 
           <View style={styles.signupRow}>
             <Text style={styles.signupText}>{t('auth.dontHaveAccount')}</Text>
-            <Link href="/auth/signup" asChild><TouchableOpacity><Text style={[styles.signupLink, { color: PRIMARY }]}>{t('auth.signUp')}</Text></TouchableOpacity></Link>
+            <Link href="/auth/signup" asChild><PressableScale haptic="light"><Text style={[styles.signupLink, { color: PRIMARY }]}>{t('auth.signUp')}</Text></PressableScale></Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

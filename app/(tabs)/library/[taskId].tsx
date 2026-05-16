@@ -1,127 +1,102 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ScrollView,
-  Animated,
+  ActivityIndicator,
 } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import PressableScale from '@/components/PressableScale';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/auth';
+import { toggleGuideBookmark, getUserBookmarkedGuides, type TaskGuideRow } from '@/lib/api';
 
-const MOCK_STEPS = [
-  {
-    stepNumber: 1,
-    title: 'Gather Tools & Materials',
-    instructions:
-      'Before starting, gather all necessary tools and materials. Lay them out on a clean surface. This prevents mid-task interruptions and ensures you have everything needed for a quality installation.',
-    tools: ['Pipe wrench', 'Channel-lock pliers', 'Teflon tape', 'Bucket', 'Towel'],
-    estimatedMinutes: 5,
-    tips: [
-      'Use a 5-gallon bucket to catch residual water',
-      'Have extra Teflon tape on hand',
-    ],
-    commonMistakes: [
-      'Forgetting to turn off the water supply',
-      'Not having a towel ready for drips',
-    ],
-    codeReference: null,
-  },
-  {
-    stepNumber: 2,
-    title: 'Shut Off Water Supply',
-    instructions:
-      'Locate the shut-off valve under the sink and turn it clockwise until fully closed. Open the faucet to release any remaining pressure in the line. Use the bucket to catch any residual water.',
-    tools: ['Adjustable wrench', 'Bucket'],
-    estimatedMinutes: 5,
-    tips: [
-      'Turn the handle fully — some valves need multiple turns',
-      'Verify no water flows from the faucet before proceeding',
-    ],
-    commonMistakes: [
-      'Not fully closing the valve',
-      'Skipping the faucet test',
-    ],
-    codeReference: 'IPC 606.1 — Shutoff valves required',
-  },
-  {
-    stepNumber: 3,
-    title: 'Remove Old Trap',
-    instructions:
-      'Place the bucket under the trap. Use channel-lock pliers to unscrew the slip nuts on both ends of the P-trap. Turn counterclockwise. Remove the trap and let remaining water drain into the bucket.',
-    tools: ['Channel-lock pliers', 'Bucket'],
-    estimatedMinutes: 8,
-    tips: [
-      'Hand-tight is often enough on slip nuts',
-      'Inspect old trap for cracks or damage',
-    ],
-    commonMistakes: [
-      'Over-tightening causing cracked fittings',
-      'Losing the slip nut washers',
-    ],
-    codeReference: null,
-  },
-  {
-    stepNumber: 4,
-    title: 'Install New P-Trap',
-    instructions:
-      'Slide the slip nuts and washers onto the drain pipes first. Position the new P-trap, aligning the inlet with the sink drain and the outlet with the wall drain. Hand-tighten the slip nuts.',
-    tools: ['New P-trap kit', 'Channel-lock pliers'],
-    estimatedMinutes: 10,
-    tips: [
-      'Ensure the trap arm has the proper slope toward the drain',
-      '1/4" per foot slope is required for proper drainage',
-    ],
-    commonMistakes: [
-      'Installing trap arm with reverse slope',
-      'Forgetting washers on slip nuts',
-    ],
-    codeReference: 'IPC 704.1 — Horizontal drain slope: 1/4" per foot',
-  },
-  {
-    stepNumber: 5,
-    title: 'Test for Leaks',
-    instructions:
-      'Turn the water supply back on slowly. Fill the sink and then release the water. Observe all connections for at least 2 minutes. Check for drips at every joint. Tighten as needed.',
-    tools: ['Flashlight', 'Paper towels'],
-    estimatedMinutes: 10,
-    tips: [
-      'Use dry paper towels to detect small drips',
-      'Check after 30 minutes as thermal changes can cause leaks',
-    ],
-    commonMistakes: [
-      'Declaring success before a full 2-minute observation',
-      'Over-tightening leaking joints (hand-tight + 1/4 turn is usually sufficient)',
-    ],
-    codeReference: 'IPC 312.1 — Required leak test',
-  },
-];
+type GuideStep = {
+  order: number;
+  title: string;
+  description: string;
+  tip?: string;
+  warning?: string;
+};
 
 export default function TaskDetailScreen() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
+  const user = useAuthStore((s) => s.user);
+  const [guide, setGuide] = useState<TaskGuideRow | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
 
-  const step = MOCK_STEPS[currentStep];
-  const isLastStep = currentStep === MOCK_STEPS.length - 1;
+  useEffect(() => {
+    async function fetchGuide() {
+      const { data } = await supabase
+        .from('task_guides')
+        .select('*')
+        .eq('id', taskId)
+        .single();
+      setGuide(data ?? null);
+      setLoading(false);
+    }
+    fetchGuide();
+  }, [taskId]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getUserBookmarkedGuides(user.id).then(({ data }) => {
+      if (data) setIsBookmarked(data.some((r) => r.guide_id === taskId));
+    });
+  }, [user?.id, taskId]);
+
+  const handleBookmark = async () => {
+    if (!user?.id) return;
+    setIsBookmarked((v) => !v);
+    const { error } = await toggleGuideBookmark(user.id, taskId!, isBookmarked);
+    if (error) setIsBookmarked((v) => !v); // rollback
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#E8711A" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!guide) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 }}>
+        <Ionicons name="alert-circle-outline" size={48} color="#D32F2F" />
+        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', marginTop: 16 }}>Guide not found</Text>
+        <PressableScale
+          haptic="light"
+          accessibilityRole="button"
+          onPress={() => router.back()}
+          style={{ marginTop: 20, backgroundColor: '#E8711A', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+        >
+          <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Go Back</Text>
+        </PressableScale>
+      </SafeAreaView>
+    );
+  }
+
+  const steps: GuideStep[] = Array.isArray(guide.steps) ? guide.steps : [];
+  const step = steps[currentStep];
+  const isLastStep = currentStep === steps.length - 1;
   const isFirstStep = currentStep === 0;
-  const progress = (currentStep + 1) / MOCK_STEPS.length;
+  const progress = steps.length > 0 ? (currentStep + 1) / steps.length : 0;
 
   const markStepComplete = () => {
     setCompletedSteps((prev) => new Set([...prev, currentStep]));
     if (!isLastStep) {
       setCurrentStep((s) => s + 1);
     } else {
-      // Task complete
       router.back();
     }
-  };
-
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
   };
 
   return (
@@ -137,7 +112,9 @@ export default function TaskDetailScreen() {
           borderBottomColor: '#3A3A3C',
         }}
       >
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale
+          haptic="light"
+          accessibilityRole="button"
           onPress={() => router.back()}
           style={{
             width: 36,
@@ -150,35 +127,29 @@ export default function TaskDetailScreen() {
           }}
         >
           <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
-        </TouchableOpacity>
+        </PressableScale>
 
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 16, color: '#FFFFFF', fontWeight: '700' }} numberOfLines={1}>
-            Install PVC P-Trap
+            {guide.title}
           </Text>
           <Text style={{ fontSize: 12, color: '#8E8E93', marginTop: 2 }}>
-            Step {currentStep + 1} of {MOCK_STEPS.length}
+            Step {currentStep + 1} of {steps.length}
           </Text>
         </View>
 
-        <TouchableOpacity accessibilityRole="button" onPress={() => setIsBookmarked(!isBookmarked)} style={{ padding: 8 }}>
+        <PressableScale haptic="light" accessibilityRole="button" onPress={handleBookmark} style={{ padding: 8 }}>
           <Ionicons
             name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
             size={22}
             color={isBookmarked ? '#E8711A' : '#8E8E93'}
           />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
 
       {/* Progress bar */}
       <View style={{ height: 4, backgroundColor: '#2C2C2E' }}>
-        <View
-          style={{
-            height: 4,
-            backgroundColor: '#E8711A',
-            width: `${progress * 100}%`,
-          }}
-        />
+        <View style={{ height: 4, backgroundColor: '#E8711A', width: `${progress * 100}%` }} />
       </View>
 
       {/* Step indicators */}
@@ -188,11 +159,11 @@ export default function TaskDetailScreen() {
         style={{ maxHeight: 52, borderBottomWidth: 1, borderBottomColor: '#3A3A3C' }}
         contentContainerStyle={{ paddingHorizontal: 16, alignItems: 'center', gap: 8 }}
       >
-        {MOCK_STEPS.map((s, i) => {
+        {steps.map((s, i) => {
           const isCompleted = completedSteps.has(i);
           const isCurrent = i === currentStep;
           return (
-            <TouchableOpacity accessibilityRole="button" key={i} onPress={() => setCurrentStep(i)}>
+            <PressableScale haptic="light" accessibilityRole="button" key={i} onPress={() => setCurrentStep(i)}>
               <View
                 style={{
                   width: 32,
@@ -212,218 +183,176 @@ export default function TaskDetailScreen() {
                 {isCompleted ? (
                   <Ionicons name="checkmark" size={16} color="#2D8A4E" />
                 ) : (
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '700',
-                      color: isCurrent ? '#E8711A' : '#8E8E93',
-                    }}
-                  >
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isCurrent ? '#E8711A' : '#8E8E93' }}>
                     {i + 1}
                   </Text>
                 )}
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           );
         })}
       </ScrollView>
 
       {/* Step content */}
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-        {/* Step header */}
-        <View style={{ marginBottom: 16 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            <View
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                backgroundColor: '#E8711A',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>
-                {step.stepNumber}
-              </Text>
+        {step ? (
+          <>
+            <Animated.View entering={FadeInDown.delay(80).duration(500).springify()}>
+            {/* Step header */}
+            <View style={{ marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <View
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: '#E8711A',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '800' }}>{step.order}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 22, color: '#FFFFFF', fontWeight: '700' }}>{step.title}</Text>
             </View>
-            <View
-              style={{
-                backgroundColor: 'rgba(232, 113, 26, 0.1)',
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 9999,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Ionicons name="time-outline" size={12} color="#E8711A" />
-              <Text style={{ color: '#E8711A', fontSize: 12, fontWeight: '600' }}>
-                {step.estimatedMinutes} min
-              </Text>
+
+            {/* Description */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 15, color: '#EBEBF5', lineHeight: 24 }}>{step.description}</Text>
             </View>
-          </View>
-          <Text style={{ fontSize: 22, color: '#FFFFFF', fontWeight: '700' }}>{step.title}</Text>
-        </View>
+            </Animated.View>
 
-        {/* Image placeholder */}
-        <View
-          style={{
-            height: 180,
-            backgroundColor: '#2C2C2E',
-            borderRadius: 16,
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 20,
-            borderWidth: 1,
-            borderColor: '#3A3A3C',
-          }}
-        >
-          <Ionicons name="image-outline" size={48} color="#636366" />
-          <Text style={{ color: '#636366', fontSize: 13, marginTop: 8 }}>Step illustration</Text>
-        </View>
-
-        {/* Instructions */}
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontSize: 15, color: '#EBEBF5', lineHeight: 24 }}>{step.instructions}</Text>
-        </View>
-
-        {/* Tools */}
-        <View
-          style={{
-            backgroundColor: '#2C2C2E',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 12,
-            borderWidth: 1,
-            borderColor: '#3A3A3C',
-          }}
-        >
-          <Text style={{ fontSize: 13, color: '#8E8E93', fontWeight: '700', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-            Tools Needed
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {step.tools.map((tool) => (
-              <View
-                key={tool}
+            {/* Tip */}
+            {step.tip && (
+              <PressableScale
+                haptic="light"
+                accessibilityRole="button"
+                onPress={() => setExpandedSection(expandedSection === 'tip' ? null : 'tip')}
                 style={{
+                  backgroundColor: '#2C2C2E',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: '#3A3A3C',
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: '#3A3A3C',
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
-                  borderRadius: 8,
+                  justifyContent: 'space-between',
                 }}
               >
-                <Ionicons name="hammer-outline" size={13} color="#8E8E93" />
-                <Text style={{ color: '#EBEBF5', fontSize: 13 }}>{tool}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="bulb-outline" size={18} color="#F9A825" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Pro Tip</Text>
+                </View>
+                <Ionicons name={expandedSection === 'tip' ? 'chevron-up' : 'chevron-down'} size={18} color="#8E8E93" />
+              </PressableScale>
+            )}
+            {expandedSection === 'tip' && step.tip && (
+              <View style={{ backgroundColor: '#2C2C2E', borderRadius: 12, padding: 16, marginTop: -4, marginBottom: 12, borderWidth: 1, borderColor: '#3A3A3C' }}>
+                <Text style={{ color: '#EBEBF5', fontSize: 14, lineHeight: 20 }}>{step.tip}</Text>
               </View>
-            ))}
-          </View>
-        </View>
+            )}
 
-        {/* Tips (expandable) */}
-        <TouchableOpacity accessibilityRole="button"
-          onPress={() => toggleSection('tips')}
-          style={{
-            backgroundColor: '#2C2C2E',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 12,
-            borderWidth: 1,
-            borderColor: '#3A3A3C',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="bulb-outline" size={18} color="#F9A825" />
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>
-              Pro Tips ({step.tips.length})
-            </Text>
-          </View>
-          <Ionicons
-            name={expandedSection === 'tips' ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color="#8E8E93"
-          />
-        </TouchableOpacity>
-        {expandedSection === 'tips' && (
-          <View style={{ backgroundColor: '#2C2C2E', borderRadius: 12, padding: 16, marginTop: -4, marginBottom: 12, borderWidth: 1, borderColor: '#3A3A3C', gap: 8 }}>
-            {step.tips.map((tip, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#F9A825', marginTop: 7 }} />
-                <Text style={{ flex: 1, color: '#EBEBF5', fontSize: 14, lineHeight: 20 }}>{tip}</Text>
+            {/* Warning */}
+            {step.warning && (
+              <View
+                style={{
+                  backgroundColor: 'rgba(211, 47, 47, 0.08)',
+                  borderRadius: 12,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(211, 47, 47, 0.3)',
+                  marginBottom: 12,
+                }}
+              >
+                <Ionicons name="warning-outline" size={18} color="#D32F2F" style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, color: '#EBEBF5', fontSize: 14, lineHeight: 20 }}>{step.warning}</Text>
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {/* Common Mistakes (expandable) */}
-        <TouchableOpacity accessibilityRole="button"
-          onPress={() => toggleSection('mistakes')}
-          style={{
-            backgroundColor: '#2C2C2E',
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 12,
-            borderWidth: 1,
-            borderColor: '#3A3A3C',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons name="warning-outline" size={18} color="#D32F2F" />
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>
-              Common Mistakes ({step.commonMistakes.length})
-            </Text>
-          </View>
-          <Ionicons
-            name={expandedSection === 'mistakes' ? 'chevron-up' : 'chevron-down'}
-            size={18}
-            color="#8E8E93"
-          />
-        </TouchableOpacity>
-        {expandedSection === 'mistakes' && (
-          <View style={{ backgroundColor: '#2C2C2E', borderRadius: 12, padding: 16, marginTop: -4, marginBottom: 12, borderWidth: 1, borderColor: '#3A3A3C', gap: 8 }}>
-            {step.commonMistakes.map((mistake, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#D32F2F', marginTop: 7 }} />
-                <Text style={{ flex: 1, color: '#EBEBF5', fontSize: 14, lineHeight: 20 }}>{mistake}</Text>
+            {/* Code Reference */}
+            {guide.code_reference && (
+              <View
+                style={{
+                  backgroundColor: 'rgba(58, 80, 107, 0.2)',
+                  borderRadius: 12,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(58, 80, 107, 0.4)',
+                  marginBottom: 12,
+                }}
+              >
+                <Ionicons name="document-text-outline" size={18} color="#6A8CB0" />
+                <Text style={{ flex: 1, color: '#6A8CB0', fontSize: 13, fontFamily: 'monospace' }}>
+                  {guide.code_reference}
+                </Text>
               </View>
-            ))}
-          </View>
-        )}
+            )}
 
-        {/* Code Reference */}
-        {step.codeReference && (
-          <View
-            style={{
-              backgroundColor: 'rgba(58, 80, 107, 0.2)',
-              borderRadius: 12,
-              padding: 14,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              borderWidth: 1,
-              borderColor: 'rgba(58, 80, 107, 0.4)',
-            }}
-          >
-            <Ionicons name="document-text-outline" size={18} color="#3A506B" style={{ color: '#6A8CB0' }} />
-            <Text style={{ flex: 1, color: '#6A8CB0', fontSize: 13, fontFamily: 'monospace' }}>
-              {step.codeReference}
+            {/* Tools & Materials */}
+            {(guide.tools_required?.length > 0 || guide.materials?.length > 0) && (
+              <View
+                style={{
+                  backgroundColor: '#2C2C2E',
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 12,
+                  borderWidth: 1,
+                  borderColor: '#3A3A3C',
+                }}
+              >
+                {guide.tools_required?.length > 0 && (
+                  <>
+                    <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '700', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+                      Tools Needed
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: guide.materials?.length > 0 ? 14 : 0 }}>
+                      {guide.tools_required.map((tool) => (
+                        <View
+                          key={tool}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#3A3A3C', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                        >
+                          <Ionicons name="hammer-outline" size={13} color="#8E8E93" />
+                          <Text style={{ color: '#EBEBF5', fontSize: 13 }}>{tool}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
+                {guide.materials?.length > 0 && (
+                  <>
+                    <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '700', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1 }}>
+                      Materials
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {guide.materials.map((mat) => (
+                        <View
+                          key={mat}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#3A3A3C', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                        >
+                          <Ionicons name="cube-outline" size={13} color="#8E8E93" />
+                          <Text style={{ color: '#EBEBF5', fontSize: 13 }}>{mat}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
+          </>
+        ) : (
+          <View style={{ alignItems: 'center', paddingTop: 60 }}>
+            <Ionicons name="checkmark-circle" size={64} color="#2D8A4E" />
+            <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginTop: 16 }}>Guide Complete!</Text>
+            <Text style={{ color: '#8E8E93', fontSize: 14, marginTop: 8, textAlign: 'center' }}>
+              You've completed all steps for {guide.title}.
             </Text>
           </View>
         )}
@@ -446,8 +375,9 @@ export default function TaskDetailScreen() {
           gap: 12,
         }}
       >
-        {/* Previous */}
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale
+          haptic="light"
+          accessibilityRole="button"
           onPress={() => !isFirstStep && setCurrentStep((s) => s - 1)}
           disabled={isFirstStep}
           style={{
@@ -462,11 +392,21 @@ export default function TaskDetailScreen() {
           }}
         >
           <Ionicons name="chevron-back" size={22} color={isFirstStep ? '#636366' : '#EBEBF5'} />
-        </TouchableOpacity>
+        </PressableScale>
 
-        {/* Check My Work */}
-        <TouchableOpacity accessibilityRole="button"
-          onPress={() => router.push('/(tabs)/camera')}
+        {/* Check My Work — passes guided mode context (Task 6) */}
+        <PressableScale
+          haptic="light"
+          accessibilityRole="button"
+          onPress={() => {
+            const params: Record<string, string> = {};
+            if (guide && step) {
+              params.guideTitle = guide.title;
+              params.stepTitle = step.title;
+              params.stepIndex = String(step.order);
+            }
+            router.push({ pathname: '/(tabs)/camera', params } as any);
+          }}
           style={{
             flex: 1,
             paddingVertical: 13,
@@ -482,10 +422,12 @@ export default function TaskDetailScreen() {
         >
           <Ionicons name="camera-outline" size={18} color="#E8711A" />
           <Text style={{ color: '#E8711A', fontSize: 14, fontWeight: '700' }}>Check My Work</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         {/* Next / Complete */}
-        <TouchableOpacity accessibilityRole="button"
+        <PressableScale
+          haptic="medium"
+          accessibilityRole="button"
           onPress={markStepComplete}
           style={{
             flex: 1,
@@ -507,7 +449,7 @@ export default function TaskDetailScreen() {
           <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700' }}>
             {isLastStep ? 'Complete' : 'Next'}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </SafeAreaView>
   );

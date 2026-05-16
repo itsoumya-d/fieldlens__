@@ -37,7 +37,14 @@
     "improvement": "改善提案",
     "safety": "安全警告",
     "tipOfDay": "今日のヒント",
-    "noFeedback": "AIフィードバックを得るには、カメラを作業に向けてください"
+    "noFeedback": "AIフィードバックを得るには、カメラを作業に向けてください",
+    "resultLooksGood": "Looks Good",
+    "resultCheckThis": "Check This",
+    "resultIssueFound": "Issue Found",
+    "resultUnclear": "Unclear",
+    "flashOn": "Flash on",
+    "flashOff": "Flash off",
+    "flipCamera": "Flip camera"
   },
   "library": {
     "title": "タスクライブラリ",
@@ -58,7 +65,18 @@
     "steps": "手順",
     "startTask": "タスクを開始",
     "noTasks": "タスクが見つかりません",
-    "savedTasks": "保存済みタスク"
+    "savedTasks": "保存済みタスク",
+    "filterAll": "All",
+    "filterRoughIn": "Rough-In",
+    "filterInstall": "Install",
+    "filterRepair": "Repair",
+    "filterMaintenance": "Maintenance",
+    "filterEmergency": "Emergency",
+    "filterCode": "Code",
+    "estimatedMinutes": "{{count}}m",
+    "stepsCount": "{{count}} steps",
+    "bookmarkAdd": "Save task",
+    "bookmarkRemove": "Remove saved task"
   },
   "progress": {
     "title": "私の進捗",
@@ -74,7 +92,12 @@
     "monthly": "今月",
     "allTime": "累計",
     "noProgress": "最初のセッションを完了して進捗を確認しましょう",
-    "certifications": "資格・認定"
+    "certifications": "資格・認定",
+    "weekOf": "Week of {{dates}}",
+    "noRecentTasks": "No recent tasks",
+    "completeFirst": "Complete your first task to see history here",
+    "lockedAchievement": "Locked",
+    "unlockedOf": "{{unlocked}}/{{total}}"
   },
   "settings": {
     "title": "設定",
@@ -193,5 +216,15 @@
     "de": "Deutsch",
     "ja": "日本語",
     "ko": "한국어"
+  },
+  "photos": {
+    "title": "Photo Docs",
+    "noPhotos": "No photos yet",
+    "captureProgress": "Capture site photos to track progress",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "exportPhotos": "Export photos",
+    "filterAll": "All",
+    "filterRecent": "Recent"
   }
 }
