@@ -22,6 +22,7 @@ import { useAppStore } from '@/store/app';
 import { analyzeImage, addUserXP, unlockAchievement, getUserXP, getAllAchievements, getUserUnlockedAchievements } from '@/lib/api';
 import { compressToBase64 } from '@/lib/imageUtils';
 import { supabase } from '@/lib/supabase';
+import { enqueueOperation } from '@/lib/offline';
 import { useTranslation } from 'react-i18next';
 import { triggerReview } from '@/lib/review';
 import * as Speech from 'expo-speech';
@@ -195,8 +196,8 @@ export default function CameraScreen() {
 
       setAssessment(result);
 
-      // Persist result to ai_analyses (fire-and-forget)
-      supabase.from('ai_analyses').insert({
+      // Persist result to ai_analyses; enqueue offline if insert fails
+      const analysisPayload = {
         user_id: user.id,
         session_id: activeSession?.id ?? null,
         trade: activeSession?.trade ?? 'general',
@@ -205,7 +206,11 @@ export default function CameraScreen() {
         details: result.details,
         code_reference: result.codeReference ?? null,
         recommendation: result.recommendation ?? null,
-      }).then(undefined, () => {});
+      };
+      const { error: insertErr } = await supabase.from('ai_analyses').insert(analysisPayload);
+      if (insertErr) {
+        await enqueueOperation('create', 'ai_analyses', analysisPayload);
+      }
 
       incrementAnalysis();
       triggerReview();

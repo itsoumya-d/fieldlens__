@@ -5,6 +5,9 @@ import { useColorScheme, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
+import { useCallback } from 'react';
+import { useAutoSync, type QueuedOperation } from '@/lib/offline';
+import { supabase } from '@/lib/supabase';
 
 function CameraTabIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
@@ -35,6 +38,15 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { t } = useTranslation();
+
+  const syncHandler = useCallback(async (op: QueuedOperation): Promise<boolean> => {
+    if (op.type === 'create') {
+      const { error } = await supabase.from(op.table).insert(op.payload);
+      return !error;
+    }
+    return false;
+  }, []);
+  useAutoSync(syncHandler);
 
   const activeColor = '#2563EB';
   const bgColor = isDark ? '#0F172A' : '#FFFFFF';
