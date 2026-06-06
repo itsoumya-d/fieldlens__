@@ -28,6 +28,15 @@ import {
 } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 
+type FileTypeFilter = 'all' | 'photos' | 'documents' | 'signatures';
+
+function fileIcon(mimeType: string): string {
+  if (mimeType?.startsWith('image/')) return 'image-outline';
+  if (mimeType?.includes('pdf')) return 'document-text-outline';
+  if (mimeType?.includes('signature')) return 'pencil-outline';
+  return 'document-outline';
+}
+
 type Filter = 'All' | 'Rough-In' | 'Install' | 'Repair' | 'Maintenance' | 'Emergency' | 'Code';
 
 const FILTERS: Filter[] = ['All', 'Rough-In', 'Install', 'Repair', 'Maintenance', 'Emergency', 'Code'];
@@ -62,6 +71,7 @@ export default function LibraryScreen() {
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<Filter>('All');
+  const [fileFilter, setFileFilter] = useState<FileTypeFilter>('all');
   const [guides, setGuides] = useState<TaskGuideRow[]>([]);
   const [bookmarks, setBookmarks] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -179,7 +189,7 @@ export default function LibraryScreen() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [search, activeFilter, loadGuides, PAGE_SIZE]);
 
-  const handleBookmark = async (guideId: string) => {
+  const handleBookmark = useCallback(async (guideId: string) => {
     if (!user?.id) return;
     const isBookmarked = bookmarks.has(guideId);
     // Optimistic update
@@ -199,9 +209,9 @@ export default function LibraryScreen() {
         return next;
       });
     }
-  };
+  }, [user?.id, bookmarks]);
 
-  const renderTask = ({ item: task, index }: { item: TaskGuideRow; index: number }) => {
+  const renderTask = useCallback(({ item: task, index }: { item: TaskGuideRow; index: number }) => {
     const diffStyle = difficultyColors[task.difficulty as keyof typeof difficultyColors] ?? difficultyColors.beginner;
     const isBookmarked = bookmarks.has(task.id);
 
@@ -317,7 +327,7 @@ export default function LibraryScreen() {
       </PressableScale>
       </Animated.View>
     );
-  };
+  }, [bookmarks, handleBookmark]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
@@ -405,6 +415,45 @@ export default function LibraryScreen() {
           </PressableScale>
         ))}
       </ScrollView>
+
+      {/* File type filter chips — K-157 */}
+      {(() => {
+        const FILE_TYPE_CHIPS: { key: FileTypeFilter; label: string; icon: string }[] = [
+          { key: 'all', label: 'All', icon: 'apps-outline' },
+          { key: 'photos', label: 'Photos', icon: 'image-outline' },
+          { key: 'documents', label: 'Docs', icon: 'document-text-outline' },
+          { key: 'signatures', label: 'Signatures', icon: 'pencil-outline' },
+        ];
+        return (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 8, alignItems: 'center' }}>
+            {FILE_TYPE_CHIPS.map(({ key, label, icon }) => {
+              const active = fileFilter === key;
+              return (
+                <PressableScale
+                  key={key}
+                  haptic="light"
+                  accessibilityRole="button"
+                  onPress={() => setFileFilter(key)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    backgroundColor: active ? '#2563EB' : '#1C1C1E',
+                    borderWidth: 1,
+                    borderColor: active ? '#2563EB' : '#3A3A3C',
+                  }}
+                >
+                  <Ionicons name={icon as any} size={14} color={active ? '#FFFFFF' : '#94A3B8'} />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: active ? '#FFFFFF' : '#94A3B8' }}>{label}</Text>
+                </PressableScale>
+              );
+            })}
+          </ScrollView>
+        );
+      })()}
 
       {/* Results count */}
       <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>

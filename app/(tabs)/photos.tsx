@@ -133,7 +133,7 @@ export default function PhotosScreen() {
     fetchData();
   };
 
-  const renderPhoto = ({ item, index }: { item: WorkPhoto; index: number }) => {
+  const renderPhoto = useCallback(({ item, index }: { item: WorkPhoto; index: number }) => {
     const color = TRADE_COLOR[item.trade] ?? '#E8711A';
     if (view === 'grid') {
       return (
@@ -195,9 +195,9 @@ export default function PhotosScreen() {
         </PressableScale>
       </Animated.View>
     );
-  };
+  }, [view, startComparison, setCompareModal]);
 
-  const renderComparison = ({ item, index }: { item: PhotoComparison; index: number }) => (
+  const renderComparison = useCallback(({ item, index }: { item: PhotoComparison; index: number }) => (
     <Animated.View entering={FadeInDown.delay(80 + index * 60).duration(260).springify()}>
     <PressableScale
       haptic="light"
@@ -241,7 +241,7 @@ export default function PhotosScreen() {
       </View>
     </PressableScale>
     </Animated.View>
-  );
+  ), [setSelectedCompare]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>

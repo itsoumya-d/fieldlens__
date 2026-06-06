@@ -9,6 +9,8 @@ import Purchases, { PurchasesPackage } from 'react-native-purchases';
 import PressableScale from '@/components/PressableScale';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
+import { useSubscription } from '@/lib/useSubscription';
+import { track, Events } from '@/lib/analytics';
 
 const PRIMARY = '#15803D';
 const PRIMARY_BG = '#DCFCE7';
@@ -52,8 +54,10 @@ export default function PaywallScreen() {
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { offerings } = useSubscription();
 
   useEffect(() => {
+    track(Events.PAYWALL_SHOWN, { app: 'fieldlens', plan: selectedPlan });
     Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     const pulse = Animated.loop(
       Animated.sequence([
@@ -89,6 +93,11 @@ export default function PaywallScreen() {
       }
       const { customerInfo } = await Purchases.purchasePackage(pkg);
       if (customerInfo.entitlements.active['pro'] || Object.keys(customerInfo.entitlements.active).length > 0) {
+        if (selectedPlan === 'annual') {
+          track(Events.TRIAL_STARTED, { app: 'fieldlens' });
+        } else {
+          track(Events.SUBSCRIBED, { app: 'fieldlens', plan: selectedPlan });
+        }
         router.replace('/(tabs)/');
       }
     } catch (e: unknown) {

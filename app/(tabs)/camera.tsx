@@ -132,6 +132,10 @@ export default function CameraScreen() {
   const [analysisStage, setAnalysisStage] = useState<AIAnalysisStage>('idle');
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [showOverlay, setShowOverlay] = useState(false);
+  // Before / After photo slots
+  const [activeSlot, setActiveSlot] = useState<'before' | 'after'>('before');
+  const [beforeUri, setBeforeUri] = useState<string | null>(null);
+  const [afterUri, setAfterUri] = useState<string | null>(null);
 
   const stageProgress = useSharedValue(0);
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -207,6 +211,13 @@ export default function CameraScreen() {
       });
 
       if (!photo?.uri) throw new Error('No image data captured');
+
+      // Save to before / after slot
+      if (activeSlot === 'before') {
+        setBeforeUri(photo.uri);
+      } else {
+        setAfterUri(photo.uri);
+      }
 
       // Stage: uploading — compression + sending begins
       setAnalysisStage('uploading');
@@ -521,6 +532,59 @@ export default function CameraScreen() {
                 </View>
               </Reanimated.View>
             )}
+          </View>
+
+          {/* Before / After slot selector + thumbnails */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+            {/* Slot toggle */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 10 }}>
+              {(['before', 'after'] as const).map((slot) => {
+                const isActive = activeSlot === slot;
+                const thumbUri = slot === 'before' ? beforeUri : afterUri;
+                return (
+                  <PressableScale
+                    key={slot}
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Capture ${slot} photo`}
+                    onPress={() => setActiveSlot(slot)}
+                    style={{ flex: 1, alignItems: 'center', gap: 6 }}
+                  >
+                    <Text style={{ color: isActive ? '#FFFFFF' : '#8E8E93', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      {slot}
+                    </Text>
+                    <View
+                      style={{
+                        width: '100%',
+                        height: 64,
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        borderWidth: 2,
+                        borderColor: isActive ? '#2563EB' : 'rgba(255,255,255,0.15)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {thumbUri ? (
+                        // eslint-disable-next-line @typescript-eslint/no-require-imports
+                        <View style={{ flex: 1, width: '100%' }}>
+                          {/* Show retake overlay */}
+                          <View style={{ flex: 1, backgroundColor: 'rgba(37,99,235,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="checkmark-circle" size={28} color="#2563EB" />
+                          </View>
+                          <View style={{ position: 'absolute', bottom: 4, alignSelf: 'center' }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '600' }}>Retake</Text>
+                          </View>
+                        </View>
+                      ) : (
+                        <Ionicons name={slot === 'before' ? 'camera-outline' : 'camera'} size={22} color={isActive ? '#2563EB' : '#8E8E93'} />
+                      )}
+                    </View>
+                  </PressableScale>
+                );
+              })}
+            </View>
           </View>
 
           {/* Bottom controls */}

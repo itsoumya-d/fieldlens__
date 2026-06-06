@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, View, Text } from 'react-native';
+import { ScrollView, View, Text, TouchableOpacity } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,7 @@ import {
   getAllAchievements,
   getUserUnlockedAchievements,
   recordDailyActivity,
+  getTodayTotal,
   type AchievementRow,
 } from '@/lib/api';
 
@@ -99,10 +100,174 @@ function xpForLevel(level: number) {
   return level * level * 50;
 }
 
+// Returns Monday of the current week
+function getWeekMonday(now: Date): Date {
+  const d = new Date(now);
+  const day = d.getDay(); // 0=Sun
+  const diffToMon = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diffToMon);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function ScheduleView({ weeklyData }: { weeklyData: WeeklyBar[] }) {
+  const now = new Date();
+  const todayDayIndex = now.getDay(); // 0=Sun … 6=Sat
+
+  const monday = getWeekMonday(now);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const formatShort = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+  // Max hours for proportional bar height (cap at 80 px)
+  const maxBarPx = 80;
+  // weeklyData heights are already normalised 0..maxBarHeight (120).
+  // Re-scale to maxBarPx.
+  const maxHeight = Math.max(1, ...weeklyData.map((w) => w.height));
+
+  // Column order: Sun Mon Tue Wed Thu Fri Sat (matches DAY_LABELS index)
+  const columns = DAY_LABELS.map((label, i) => {
+    const bar = weeklyData[i];
+    const barH = Math.round((bar.height / maxHeight) * maxBarPx);
+    const isToday = i === todayDayIndex;
+    // Approximate hours from tasks count (1 task ≈ 0.5 h) just for display label
+    const hoursLabel = bar.tasks > 0 ? `${(bar.tasks * 0.5).toFixed(1)}h` : '0h';
+    return { label, isToday, barH, tasks: bar.tasks, hoursLabel };
+  });
+
+  return (
+    <View style={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+      {/* Week header */}
+      <View style={{ marginBottom: 20 }}>
+        <Text style={{ fontSize: 17, color: '#FFFFFF', fontWeight: '700' }}>Week Schedule</Text>
+        <Text style={{ fontSize: 13, color: '#8E8E93', marginTop: 2 }}>
+          {formatShort(monday)} – {formatShort(sunday)}
+        </Text>
+      </View>
+
+      {/* Day grid card */}
+      <View
+        style={{
+          backgroundColor: '#2C2C2E',
+          borderRadius: 16,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: '#3A3A3C',
+          marginBottom: 20,
+        }}
+      >
+        <View style={{ flexDirection: 'row' }}>
+          {columns.map((col) => (
+            <View
+              key={col.label}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                paddingVertical: 8,
+                paddingHorizontal: 2,
+                borderRadius: 8,
+                borderWidth: col.isToday ? 1.5 : 0,
+                borderColor: col.isToday ? '#E8711A' : 'transparent',
+                backgroundColor: col.isToday ? '#E8711A10' : 'transparent',
+              }}
+            >
+              {/* Day label */}
+              <Text
+                style={{
+                  fontSize: 10,
+                  color: col.isToday ? '#E8711A' : '#8E8E93',
+                  fontWeight: col.isToday ? '700' : '500',
+                  marginBottom: 6,
+                }}
+              >
+                {col.label}
+              </Text>
+
+              {/* Spacer above bar so bars align at the bottom */}
+              <View style={{ flex: 1, justifyContent: 'flex-end', minHeight: maxBarPx }}>
+                <View
+                  style={{
+                    width: 24,
+                    height: col.barH > 0 ? col.barH : 8,
+                    borderRadius: 4,
+                    backgroundColor: '#E8711A',
+                    opacity: col.tasks > 0 ? 1 : 0.15,
+                  }}
+                />
+              </View>
+
+              {/* Hours label */}
+              <Text
+                style={{
+                  fontSize: 9,
+                  color: col.isToday ? '#E8711A' : '#636366',
+                  marginTop: 4,
+                  fontWeight: '600',
+                }}
+              >
+                {col.hoursLabel}
+              </Text>
+
+              {/* Task count badge */}
+              <View
+                style={{
+                  marginTop: 4,
+                  backgroundColor: col.tasks > 0 ? 'rgba(232,113,26,0.2)' : '#3A3A3C',
+                  borderRadius: 8,
+                  paddingHorizontal: 4,
+                  paddingVertical: 2,
+                  minWidth: 20,
+                  alignItems: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9,
+                    color: col.tasks > 0 ? '#E8711A' : '#636366',
+                    fontWeight: '700',
+                  }}
+                >
+                  {col.tasks}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Tasks Scheduled section */}
+      <View
+        style={{
+          backgroundColor: '#2C2C2E',
+          borderRadius: 16,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: '#3A3A3C',
+        }}
+      >
+        <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '700', marginBottom: 12 }}>
+          Tasks Scheduled
+        </Text>
+        <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+          <Ionicons name="calendar-outline" size={36} color="#3A3A3C" />
+          <Text style={{ color: '#8E8E93', fontSize: 14, marginTop: 8 }}>No tasks scheduled</Text>
+          <Text style={{ color: '#636366', fontSize: 12, marginTop: 4 }}>
+            Assigned tasks will appear here
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function ProgressScreen() {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'progress' | 'schedule'>('progress');
+  const [todayHours, setTodayHours] = useState(0);
   const [weeklyData, setWeeklyData] = useState<WeeklyBar[]>(
     DAY_LABELS.map((day) => ({ day, tasks: 0, height: 0 }))
   );
@@ -178,6 +343,11 @@ export default function ProgressScreen() {
     }).finally(() => setLoading(false));
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+    getTodayTotal(user.id).then(hours => setTodayHours(hours));
+  }, [user]);
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
@@ -195,6 +365,49 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+        {/* View mode toggle */}
+        <View
+          style={{
+            flexDirection: 'row',
+            backgroundColor: '#1C1C1E',
+            borderRadius: 24,
+            padding: 3,
+            alignSelf: 'center',
+            marginHorizontal: 20,
+            marginBottom: 16,
+            marginTop: 12,
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setViewMode('progress')}
+            style={{
+              borderRadius: 20,
+              paddingVertical: 8,
+              paddingHorizontal: 20,
+              backgroundColor: viewMode === 'progress' ? '#E8711A' : '#2C2C2E',
+            }}
+          >
+            <Text style={{ color: viewMode === 'progress' ? '#FFFFFF' : '#8E8E93', fontWeight: '600', fontSize: 14 }}>
+              Progress
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setViewMode('schedule')}
+            style={{
+              borderRadius: 20,
+              paddingVertical: 8,
+              paddingHorizontal: 20,
+              backgroundColor: viewMode === 'schedule' ? '#E8711A' : '#2C2C2E',
+            }}
+          >
+            <Text style={{ color: viewMode === 'schedule' ? '#FFFFFF' : '#8E8E93', fontWeight: '600', fontSize: 14 }}>
+              Schedule
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {viewMode === 'progress' && (
+          <>
         <Animated.View entering={FadeInDown.delay(80).duration(500).springify()}>
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 }}>
@@ -280,6 +493,24 @@ export default function ProgressScreen() {
           </View>
         </View>
         </Animated.View>
+
+        {/* Today's Time */}
+        <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
+          <View style={{ backgroundColor: '#2C2C2E', borderRadius: 16, padding: 18, borderWidth: 1, borderColor: '#1976D220', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(25,118,210,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#1976D2' }}>
+              <Ionicons name="time" size={26} color="#1976D2" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 11, color: '#8E8E93', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8 }}>Today's Hours</Text>
+              <Text style={{ fontSize: 32, color: '#FFFFFF', fontWeight: '800' }}>{todayHours}<Text style={{ fontSize: 16, color: '#8E8E93', fontWeight: '500' }}>h</Text></Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: '#8E8E93', marginBottom: 4 }}>Weekly Avg</Text>
+              <Text style={{ fontSize: 16, color: '#E8711A', fontWeight: '700' }}>{weeklyData.reduce((s, d) => s + d.tasks, 0)}</Text>
+              <Text style={{ fontSize: 10, color: '#636366' }}>tasks</Text>
+            </View>
+          </View>
+        </View>
 
         {/* Weekly Activity Chart */}
         <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
@@ -425,6 +656,10 @@ export default function ProgressScreen() {
             </View>
           </View>
         )}
+          </>
+        )}
+
+        {viewMode === 'schedule' && <ScheduleView weeklyData={weeklyData} />}
       </ScrollView>
     </SafeAreaView>
   );

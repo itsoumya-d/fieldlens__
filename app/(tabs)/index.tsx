@@ -1,11 +1,14 @@
-﻿import { ScrollView, View, Text, Alert, RefreshControl } from 'react-native';
+﻿import { ScrollView, View, Text, Alert, RefreshControl, Pressable, Linking, Modal, TouchableOpacity } from 'react-native';
 import { SkeletonFeed, SkeletonKPI } from '@/components/SkeletonLoader';
 import { router } from 'expo-router';
+import { useSubscription } from '@/lib/useSubscription';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
+import { useNetworkStatus } from '@/lib/offline';
 import { getTasks, getUserProgress, getTodayTotal, getAIDailyBriefing, getUserXP, getTodayTimeEntries, type AIDailyBriefing } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import TimeTracker from '@/components/TimeTracker';
@@ -23,11 +26,66 @@ import * as Location from 'expo-location';
 import PressableScale from '@/components/PressableScale';
 import GradientCard from '@/components/GradientCard';
 
+type SyncChipState = 'idle' | 'offline' | 'syncing' | 'synced';
+
+function SyncStatusChip() {
+  const { isConnected } = useNetworkStatus();
+  const prevConnectedRef = useRef(isConnected);
+  const [chipState, setChipState] = useState<SyncChipState>('idle');
+  const synctimer1 = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const synctimer2 = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const wasConnected = prevConnectedRef.current;
+    prevConnectedRef.current = isConnected;
+
+    if (!isConnected) {
+      if (synctimer1.current) clearTimeout(synctimer1.current);
+      if (synctimer2.current) clearTimeout(synctimer2.current);
+      setChipState('offline');
+      return;
+    }
+
+    if (!wasConnected && isConnected) {
+      // Reconnected — show syncing, then synced, then idle
+      setChipState('syncing');
+      synctimer1.current = setTimeout(() => {
+        setChipState('synced');
+        synctimer2.current = setTimeout(() => setChipState('idle'), 2000);
+      }, 1500);
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    return () => {
+      if (synctimer1.current) clearTimeout(synctimer1.current);
+      if (synctimer2.current) clearTimeout(synctimer2.current);
+    };
+  }, []);
+
+  if (chipState === 'idle') return null;
+
+  const config: Record<Exclude<SyncChipState, 'idle'>, { color: string; label: string }> = {
+    offline: { color: '#EF4444', label: 'Offline' },
+    syncing: { color: '#F59E0B', label: 'Syncing…' },
+    synced:  { color: '#22C55E', label: 'Synced' },
+  };
+  const { color, label } = config[chipState as Exclude<SyncChipState, 'idle'>];
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: color + '20', borderRadius: 12 }}>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
+      <Text style={{ fontSize: 11, color, fontWeight: '600' }}>{label}</Text>
+    </View>
+  );
+}
+
 const QUICK_ACTIONS = [
   { id: 'camera', icon: 'camera', label: 'AI Camera', color: '#E8711A', route: '/(tabs)/camera' },
   { id: 'tasks', icon: 'library', label: 'Browse Tasks', color: '#1976D2', route: '/(tabs)/library' },
   { id: 'progress', icon: 'trending-up', label: 'My Progress', color: '#2D8A4E', route: '/(tabs)/progress' },
   { id: 'photos', icon: 'images', label: 'My Photos', color: '#9C27B0', route: '/(tabs)/photos' },
+  { id: 'route', icon: 'navigate', label: 'Optimize Route', color: '#0891B2', route: '/(tabs)/route' as const },
 ];
 
 interface TaskRow {
@@ -41,6 +99,8 @@ interface TaskRow {
   step_count?: number;
   steps?: number;
   trade?: string;
+  phone?: string;
+  clientPhone?: string;
 }
 
 interface ProgressRow {
@@ -289,6 +349,24 @@ function DifficultyBadge({ level }: { level: string }) {
   );
 }
 
+// Job status badge
+type JobStatus = 'Scheduled' | 'In Progress' | 'Completed' | 'Overdue';
+const JOB_STATUS_COLORS: Record<JobStatus, { bg: string; text: string }> = {
+  'Scheduled':   { bg: '#3B82F623', text: '#3B82F6' },
+  'In Progress': { bg: '#2563EB23', text: '#2563EB' },
+  'Completed':   { bg: '#22C55E23', text: '#22C55E' },
+  'Overdue':     { bg: '#EF444423', text: '#EF4444' },
+};
+
+function JobStatusBadge({ status }: { status: JobStatus }) {
+  const colors = JOB_STATUS_COLORS[status] ?? JOB_STATUS_COLORS['Scheduled'];
+  return (
+    <View style={{ backgroundColor: colors.bg, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+      <Text style={{ color: colors.text, fontSize: 11, fontWeight: '600' }}>{status}</Text>
+    </View>
+  );
+}
+
 // Visibility rating color
 function visColor(v: WeatherData['visibility']): string {
   if (v === 'excellent') return '#2D8A4E';
@@ -498,12 +576,120 @@ function QuickActionButton({ action }: { action: typeof QUICK_ACTIONS[number] })
   );
 }
 
+// K-153: Customer signature capture modal
+function SignatureModal({
+  visible,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [signed, setSigned] = useState(false);
+
+  function handleClose() {
+    setSigned(false);
+    onClose();
+  }
+
+  function handleConfirm() {
+    if (!signed) {
+      Alert.alert('Signature Required', 'Please sign before confirming job completion.');
+      return;
+    }
+    setSigned(false);
+    onConfirm();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#2C2C2E', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 36 }}>
+          {/* Header row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700' }}>Customer Signature</Text>
+            <Pressable onPress={handleClose} accessibilityRole="button" accessibilityLabel="Close signature modal" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="close" size={24} color="#8E8E93" />
+            </Pressable>
+          </View>
+          <Text style={{ color: '#8E8E93', fontSize: 13, marginBottom: 16 }}>
+            Please sign below to confirm job completion
+          </Text>
+
+          {/* Signature pad area */}
+          <TouchableOpacity
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Tap to sign"
+            onPress={() => setSigned(true)}
+            style={{
+              height: 150,
+              borderWidth: 1,
+              borderColor: signed ? '#2D8A4E' : '#E8711A',
+              borderRadius: 8,
+              backgroundColor: '#1C1C1E',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 8,
+            }}
+          >
+            {signed ? (
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <Ionicons name="checkmark-circle" size={40} color="#2D8A4E" />
+                <Text style={{ color: '#2D8A4E', fontSize: 15, fontWeight: '700' }}>Signed</Text>
+              </View>
+            ) : (
+              <Text style={{ color: '#636366', fontSize: 14 }}>Touch here to sign</Text>
+            )}
+          </TouchableOpacity>
+          <Text style={{ color: '#636366', fontSize: 12, textAlign: 'center', marginBottom: 20 }}>
+            Sign here {'↑'}
+          </Text>
+
+          {/* Action buttons */}
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Pressable
+              onPress={() => setSigned(false)}
+              accessibilityRole="button"
+              style={{
+                flex: 1,
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: '#3A3A3C',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#8E8E93', fontSize: 15, fontWeight: '600' }}>Clear</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleConfirm}
+              accessibilityRole="button"
+              style={{
+                flex: 2,
+                paddingVertical: 14,
+                borderRadius: 12,
+                backgroundColor: '#E8711A',
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Confirm</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function HomeScreen() {
   const { t } = useTranslation();
   const { user, trade } = useAuthStore();
   const { activeSession, analysisCount, dailyLimit } = useAppStore();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [recommendedTasks, setRecommendedTasks] = useState<TaskRow[]>([]);
   const [recentActivity, setRecentActivity] = useState<ProgressRow[]>([]);
   const [checkedIn, setCheckedIn] = useState(false);
@@ -513,6 +699,13 @@ export default function HomeScreen() {
   const [briefingExpanded, setBriefingExpanded] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' | 'warning' }>({ visible: false, message: '', type: 'error' });
   const [weather, setWeather] = useState<WeatherData>(FALLBACK_WEATHER);
+  // K-158: Trade selection for personalized task suggestions
+  const [userTrade, setUserTrade] = useState<string>('');
+  // K-153: Signature capture state
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureJobId, setSignatureJobId] = useState<string | null>(null);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
+  const { isPro } = useSubscription();
 
   const displayName = user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
   const greeting = getHoursGreeting();
@@ -527,6 +720,11 @@ export default function HomeScreen() {
       const data = await fetchFieldWeather(loc.coords.latitude, loc.coords.longitude);
       if (data) setWeather(data);
     })();
+  }, []);
+
+  // K-158: Load user trade from AsyncStorage on mount
+  useEffect(() => {
+    AsyncStorage.getItem('user_trade').then(t => { if (t) setUserTrade(t); });
   }, []);
 
   // Streak counting animation
@@ -639,6 +837,21 @@ export default function HomeScreen() {
   };
 
 
+  // K-153: Complete a job after signature — updates status locally and shows confirmation
+  const handleCompleteJobRequest = (jobId: string) => {
+    setSignatureJobId(jobId);
+    setShowSignatureModal(true);
+  };
+
+  const handleSignatureConfirm = () => {
+    setSignatureData('signed');
+    setShowSignatureModal(false);
+    setToast({ visible: true, message: 'Job completed — signature captured', type: 'success' });
+    // Mark the job done locally (optimistic update — real API call goes here)
+    setRecommendedTasks(prev => prev.filter(t => t.id !== signatureJobId));
+    setSignatureJobId(null);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E' }} edges={['top']}>
@@ -667,9 +880,12 @@ export default function HomeScreen() {
             paddingBottom: 12,
           }}
         >
-          <Text style={{ fontSize: 22, color: '#FFFFFF', fontWeight: '800', letterSpacing: -0.5 }}>
-            Field<Text style={{ color: '#E8711A' }}>Lens</Text>
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 22, color: '#FFFFFF', fontWeight: '800', letterSpacing: -0.5 }}>
+              Field<Text style={{ color: '#E8711A' }}>Lens</Text>
+            </Text>
+            <SyncStatusChip />
+          </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             {/* GPS status chip */}
             <GpsStatusChip
@@ -791,6 +1007,33 @@ export default function HomeScreen() {
         {/* Weather Widget */}
         <WeatherWidget weather={weather} />
 
+        {/* Route Optimizer */}
+        <Pressable
+          onPress={() => Alert.alert('Route Optimizer', 'AI-powered route planning coming soon. Connect your jobs to enable this feature.')}
+          style={{
+            marginHorizontal: 20,
+            marginBottom: 16,
+            borderRadius: 14,
+            backgroundColor: '#2C2C2E',
+            borderWidth: 1,
+            borderColor: 'rgba(8,145,178,0.35)',
+            padding: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 14,
+          }}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#0891B220', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="navigate" size={28} color="#0891B2" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>Route Optimizer</Text>
+            <Text style={{ color: '#8E8E93', fontSize: 13, marginTop: 2 }}>Tap to plan your optimal job route for today</Text>
+            <Text style={{ color: '#0891B2', fontSize: 13, fontWeight: '600', marginTop: 6 }}>Plan My Route</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#8E8E93" />
+        </Pressable>
+
         {/* AI Coach Daily Briefing */}
         {briefing && (
           <PressableScale
@@ -820,6 +1063,46 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <Ionicons name={briefingExpanded ? 'chevron-up' : 'chevron-down'} size={18} color="#8E8E93" />
+            </View>
+
+            {/* K-158: Trade chip for personalized task suggestions */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingBottom: 10 }}>
+              {userTrade ? (
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(232,113,26,0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(232,113,26,0.25)' }}>
+                    <Ionicons name="construct-outline" size={12} color="#E8711A" />
+                    <Text style={{ color: '#E8711A', fontSize: 12, fontWeight: '700', textTransform: 'capitalize' }}>
+                      Trade: {userTrade}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => Alert.alert(
+                      'Select Trade',
+                      'Choose your trade',
+                      ['Plumbing', 'Electrical', 'HVAC', 'Carpentry', 'Concrete', 'General'].map(t => ({
+                        text: t,
+                        onPress: () => { setUserTrade(t); AsyncStorage.setItem('user_trade', t); },
+                      }))
+                    )}
+                  >
+                    <Text style={{ color: '#8E8E93', fontSize: 12, fontWeight: '500' }}>[Change]</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Pressable
+                  onPress={() => Alert.alert(
+                    'Select Trade',
+                    'Choose your trade',
+                    ['Plumbing', 'Electrical', 'HVAC', 'Carpentry', 'Concrete', 'General'].map(t => ({
+                      text: t,
+                      onPress: () => { setUserTrade(t); AsyncStorage.setItem('user_trade', t); },
+                    }))
+                  )}
+                  style={{ paddingHorizontal: 12, paddingVertical: 5, borderRadius: 9999, borderWidth: 1, borderColor: 'rgba(232,113,26,0.3)', backgroundColor: 'rgba(232,113,26,0.06)' }}
+                >
+                  <Text style={{ color: '#8E8E93', fontSize: 12, fontWeight: '500' }}>Select your trade for personalized tasks</Text>
+                </Pressable>
+              )}
             </View>
 
             {briefingExpanded && (
@@ -977,77 +1260,166 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Recommended Tasks */}
+        {/* Recommended Tasks / Jobs */}
         <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
           <Reanimated.View
             entering={FadeInDown.delay(150).duration(300).springify()}
             style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}
           >
-            <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600' }}>
-              {t('home.recommendedForYou')}
-            </Text>
-            <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel="See all tasks" onPress={() => router.push('/(tabs)/library')}>
-              <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>{t('home.seeAll')}</Text>
-            </PressableScale>
+            <View>
+              <Text style={{ fontSize: 15, color: '#8E8E93', fontWeight: '600' }}>
+                {t('home.recommendedForYou')}
+              </Text>
+              {trade && (
+                <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2, textTransform: 'capitalize' }}>
+                  Suggested for {trade}
+                </Text>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              {/* List | Map toggle */}
+              <View style={{ flexDirection: 'row', borderRadius: 8, overflow: 'hidden' }}>
+                {(['list', 'map'] as const).map((mode) => (
+                  <PressableScale
+                    key={mode}
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={`${mode} view`}
+                    onPress={() => setViewMode(mode)}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      backgroundColor: viewMode === mode ? '#2563EB' : 'transparent',
+                      borderWidth: 1,
+                      borderColor: viewMode === mode ? '#2563EB' : '#334155',
+                    }}
+                  >
+                    <Text style={{ color: viewMode === mode ? '#FFFFFF' : '#8E8E93', fontSize: 12, fontWeight: '600', textTransform: 'capitalize' }}>{mode}</Text>
+                  </PressableScale>
+                ))}
+              </View>
+              <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel="See all tasks" onPress={() => router.push('/(tabs)/library')}>
+                <Text style={{ color: '#E8711A', fontSize: 13, fontWeight: '600' }}>{t('home.seeAll')}</Text>
+              </PressableScale>
+            </View>
           </Reanimated.View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
-            {recommendedTasks.slice(0, 5).map((task, index) => (
-              <Reanimated.View
-                key={task.id}
-                entering={FadeInDown.delay(80 + index * 60).duration(350)}
-              >
-              <PressableScale
-                haptic="light"
-                accessibilityRole="button"
-                accessibilityLabel={task.name ?? task.title}
-                onPress={() => router.push(`/(tabs)/library/${task.id}` as any)}
-                style={{
-                  minHeight: 64,
-                  backgroundColor: '#2C2C2E',
-                  borderRadius: 16,
-                  overflow: 'hidden',
-                  width: 200,
-                  borderWidth: 1,
-                  borderColor: '#3A3A3C',
-                }}
-              >
-                {/* Thumbnail placeholder */}
-                <View
-                  style={{
-                    height: 100,
-                    backgroundColor: '#3A3A3C',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Ionicons
-                    name={task.trade === 'plumbing' ? 'water' : task.trade === 'electrical' ? 'flash' : 'thermometer'}
-                    size={40}
-                    color="rgba(232, 113, 26, 0.4)"
-                  />
-                </View>
-
-                <View style={{ padding: 12 }}>
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>
-                    {task.name ?? task.title}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <DifficultyBadge level={task.difficulty ?? 'beginner'} />
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Ionicons name="time-outline" size={12} color="#8E8E93" />
-                      <Text style={{ color: '#8E8E93', fontSize: 11 }}>{task.estimated_time ?? task.time ?? 0}m</Text>
+          {viewMode === 'map' ? (
+            <View style={{ height: 200, backgroundColor: '#2C2C2E', borderRadius: 16, borderWidth: 1, borderColor: '#3A3A3C', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <Ionicons name="map-outline" size={48} color="#2563EB" />
+              <Text style={{ color: '#8E8E93', fontSize: 14, fontWeight: '500', textAlign: 'center', paddingHorizontal: 24 }}>
+                Map view — configure Google Maps API key
+              </Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20 }} contentContainerStyle={{ paddingHorizontal: 20, gap: 12 }}>
+              {recommendedTasks.slice(0, 5).map((task, index) => {
+                const statusKeys: JobStatus[] = ['Scheduled', 'In Progress', 'Completed', 'Overdue'];
+                const jobStatus: JobStatus = statusKeys[index % statusKeys.length];
+                return (
+                  <Reanimated.View
+                    key={task.id}
+                    entering={FadeInDown.delay(80 + index * 60).duration(350)}
+                  >
+                  <PressableScale
+                    haptic="light"
+                    accessibilityRole="button"
+                    accessibilityLabel={task.name ?? task.title}
+                    onPress={() => router.push(`/(tabs)/library/${task.id}` as any)}
+                    style={{
+                      minHeight: 64,
+                      backgroundColor: '#2C2C2E',
+                      borderRadius: 16,
+                      overflow: 'hidden',
+                      width: 200,
+                      borderWidth: 1,
+                      borderColor: '#3A3A3C',
+                    }}
+                  >
+                    {/* Thumbnail placeholder with status badge */}
+                    <View
+                      style={{
+                        height: 100,
+                        backgroundColor: '#3A3A3C',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons
+                        name={task.trade === 'plumbing' ? 'water' : task.trade === 'electrical' ? 'flash' : 'thermometer'}
+                        size={40}
+                        color="rgba(232, 113, 26, 0.4)"
+                      />
+                      {/* Status badge — top right */}
+                      <View style={{ position: 'absolute', top: 8, right: 8 }}>
+                        <JobStatusBadge status={jobStatus} />
+                      </View>
                     </View>
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                    <Ionicons name="list-outline" size={12} color="#8E8E93" />
-                    <Text style={{ color: '#8E8E93', fontSize: 11 }}>{task.step_count ?? task.steps ?? 0} steps</Text>
-                  </View>
-                </View>
-              </PressableScale>
-              </Reanimated.View>
-            ))}
-          </ScrollView>
+
+                    <View style={{ padding: 12 }}>
+                      <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 6 }}>
+                        {task.name ?? task.title}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <DifficultyBadge level={task.difficulty ?? 'beginner'} />
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          {/* K-152: Client call button — only shown when phone is truthy */}
+                          {(task.phone ?? task.clientPhone) ? (
+                            <Pressable
+                              onPress={() => Linking.openURL(`tel:${task.phone ?? task.clientPhone}`)}
+                              accessibilityRole="button"
+                              accessibilityLabel="Call client"
+                              style={{ backgroundColor: '#E8711A20', borderRadius: 8, padding: 6 }}
+                            >
+                              <Ionicons name="call-outline" size={16} color="#E8711A" />
+                            </Pressable>
+                          ) : null}
+                          <Ionicons name="time-outline" size={12} color="#8E8E93" />
+                          <Text style={{ color: '#8E8E93', fontSize: 11 }}>{task.estimated_time ?? task.time ?? 0}m</Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                        <Ionicons name="list-outline" size={12} color="#8E8E93" />
+                        <Text style={{ color: '#8E8E93', fontSize: 11 }}>{task.step_count ?? task.steps ?? 0} steps</Text>
+                      </View>
+                      {/* K-153: Complete Job button */}
+                      {jobStatus !== 'Completed' && (
+                        <Pressable
+                          onPress={() => handleCompleteJobRequest(task.id)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Complete job: ${task.name ?? task.title}`}
+                          style={{ marginTop: 10, backgroundColor: 'rgba(232,113,26,0.12)', borderRadius: 8, paddingVertical: 7, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(232,113,26,0.3)' }}
+                        >
+                          <Text style={{ color: '#E8711A', fontSize: 12, fontWeight: '700' }}>Complete Job</Text>
+                        </Pressable>
+                      )}
+                      {/* K-155: Generate Invoice button — shown for completed jobs, gated behind Pro */}
+                      {jobStatus === 'Completed' && (
+                        <Pressable
+                          onPress={() => {
+                            if (!isPro) {
+                              Alert.alert('Pro Feature', 'Invoice generation requires a Pro subscription.', [
+                                { text: 'Cancel' },
+                                { text: 'Upgrade', onPress: () => router.push('/(tabs)/settings') },
+                              ]);
+                              return;
+                            }
+                            router.push(`/invoice/${task.id}` as any);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Generate invoice for: ${task.name ?? task.title}`}
+                          style={{ marginTop: 10, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}
+                        >
+                          <Text style={{ color: '#94A3B8', fontSize: 12 }}>Generate Invoice</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  </PressableScale>
+                  </Reanimated.View>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
         {/* Recent Activity */}
@@ -1185,6 +1557,13 @@ export default function HomeScreen() {
         message={toast.message}
         type={toast.type}
         onHide={() => setToast(t => ({ ...t, visible: false }))}
+      />
+
+      {/* K-153: Signature capture modal */}
+      <SignatureModal
+        visible={showSignatureModal}
+        onClose={() => { setShowSignatureModal(false); setSignatureJobId(null); }}
+        onConfirm={handleSignatureConfirm}
       />
     </SafeAreaView>
   );

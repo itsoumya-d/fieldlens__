@@ -1,66 +1,32 @@
-import { Platform } from 'react-native';
-import PostHog from 'posthog-react-native';
+import { PostHog } from 'posthog-react-native';
 
-// PostHog analytics — fully wired with posthog-react-native SDK
-const POSTHOG_KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY || '';
-const POSTHOG_HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
+const apiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '';
 
-let posthogClient: PostHog | null = null;
+export const posthog = apiKey
+  ? new PostHog(apiKey, { host: 'https://us.i.posthog.com' })
+  : null;
 
-function getClient(): PostHog | null {
-  if (posthogClient) return posthogClient;
-  if (!POSTHOG_KEY) return null;
-  try {
-    posthogClient = new PostHog(POSTHOG_KEY, { host: POSTHOG_HOST, enableSessionReplay: false });
-  } catch (err) {
-    console.warn('[Analytics] PostHog init failed:', err);
-  }
-  return posthogClient;
+export function identify(userId: string, traits?: Record<string, unknown>) {
+  posthog?.identify(userId, traits);
 }
 
-// Auto-initialize on import
-getClient();
+export function track(event: string, properties?: Record<string, unknown>) {
+  posthog?.capture(event, properties);
+}
 
-export const analytics = {
-  identify: async (userId: string, traits?: Record<string, unknown>) => {
-    const client = getClient();
-    if (!client) return;
-    client.identify(userId, traits as any);
-  },
-
-  track: async (event: string, properties?: Record<string, unknown>) => {
-    const client = getClient();
-    if (!client) return;
-    client.capture(event, { platform: Platform.OS, ...properties } as any);
-  },
-
-  screen: async (screenName: string, properties?: Record<string, unknown>) => {
-    const client = getClient();
-    if (!client) return;
-    client.screen(screenName, properties as any);
-  },
-
-  reset: async () => {
-    const client = getClient();
-    if (!client) return;
-    client.reset();
-  },
-
-  flush: async () => {
-    const client = getClient();
-    if (!client) return;
-    await client.flush();
-  },
-
-  getClient: () => posthogClient,
-};
+export function screen(name: string, properties?: Record<string, unknown>) {
+  posthog?.screen(name, properties);
+}
 
 export const Events = {
-  SIGNUP: 'user_signup',
-  LOGIN: 'user_login',
-  ONBOARDING_COMPLETE: 'onboarding_complete',
-  FEATURE_USED: 'feature_used',
-  SUBSCRIPTION_STARTED: 'subscription_started',
-  SUBSCRIPTION_CANCELLED: 'subscription_cancelled',
-  ERROR_OCCURRED: 'error_occurred',
+  APP_OPENED: 'App Opened',
+  SCREEN_VIEWED: 'Screen Viewed',
+  // FieldLens-specific
+  JOB_STARTED: 'Job Started',
+  PHOTO_CAPTURED: 'Photo Captured',
+  JOB_COMPLETED: 'Job Completed',
+  SYNC_QUEUED: 'Sync Queued',
+  PAYWALL_SHOWN: 'Paywall Shown',
+  TRIAL_STARTED: 'Trial Started',
+  SUBSCRIBED: 'Subscribed',
 } as const;

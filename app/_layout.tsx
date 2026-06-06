@@ -18,6 +18,8 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { initSentry } from '@/lib/sentry';
 import PressableScale from '@/components/PressableScale';
 import '../global.css';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import { identify, track, Events } from '@/lib/analytics';
 
 initSentry();
 
@@ -67,6 +69,19 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    // RevenueCat + PostHog init
+    const rcKey = Platform.select({
+      ios: process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY,
+      android: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY,
+    });
+    if (rcKey) {
+      if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+      Purchases.configure({ apiKey: rcKey });
+    }
+    track(Events.APP_OPENED, { app: 'fieldlens', platform: Platform.OS });
+  }, []);
+
+  useEffect(() => {
     async function checkBiometric() {
       const enabled = await isBiometricEnabled();
       if (!enabled) {
@@ -108,12 +123,22 @@ export default function RootLayout() {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (session?.user) {
+        identify(session.user.id, { email: session.user.email });
+        Purchases.logIn(session.user.id).catch(() => {});
+      }
     });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      if (session?.user) {
+        identify(session.user.id, { email: session.user.email });
+        Purchases.logIn(session.user.id).catch(() => {});
+      } else {
+        Purchases.logOut().catch(() => {});
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -150,8 +175,8 @@ export default function RootLayout() {
     return (
       <View className="flex-1 items-center justify-center bg-white dark:bg-gray-950">
         <View className="items-center gap-4 p-8">
-          <View className="h-20 w-20 rounded-full bg-[#6366F1]/10 items-center justify-center">
-            <Ionicons name="lock-closed" size={36} color="#6366F1" />
+          <View className="h-20 w-20 rounded-full bg-[#2563EB]/10 items-center justify-center">
+            <Ionicons name="lock-closed" size={36} color="#2563EB" />
           </View>
           <Text className="text-xl font-bold text-gray-900 dark:text-white">App Locked</Text>
           <Text className="text-sm text-gray-500 dark:text-gray-400 text-center">
@@ -163,7 +188,7 @@ export default function RootLayout() {
               const success = await authenticateWithBiometrics('Authenticate to access the app');
               if (success) setBiometricLocked(false);
             }}
-            className="mt-2 px-6 py-3 rounded-xl bg-[#6366F1]"
+            className="mt-2 px-6 py-3 rounded-xl bg-[#2563EB]"
           >
             <Text className="text-white font-semibold text-base">Unlock</Text>
           </PressableScale>

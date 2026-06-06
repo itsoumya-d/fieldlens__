@@ -1,13 +1,23 @@
-import { Tabs } from 'expo-router';
+import { useCallback, useEffect } from 'react';
+import { Tabs, usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
-import { useCallback } from 'react';
 import { useAutoSync, type QueuedOperation } from '@/lib/offline';
 import { supabase } from '@/lib/supabase';
+import { screen } from '@/lib/analytics';
+import { useAuthStore } from '@/store/auth';
+
+function ScreenTracker() {
+  const pathname = usePathname();
+  useEffect(() => {
+    screen(pathname);
+  }, [pathname]);
+  return null;
+}
 
 function CameraTabIcon({ color, focused }: { color: string; focused: boolean }) {
   return (
@@ -48,6 +58,10 @@ export default function TabLayout() {
   }, []);
   useAutoSync(syncHandler);
 
+  const user = useAuthStore(s => s.user);
+  const role = (user?.user_metadata?.org_role as 'technician' | 'owner') ?? 'technician';
+  const isOwner = role === 'owner';
+
   const activeColor = '#2563EB';
   const bgColor = isDark ? '#0F172A' : '#FFFFFF';
   const borderColor = isDark ? '#1E293B' : '#E5E7EB';
@@ -77,6 +91,7 @@ export default function TabLayout() {
         tabPress: () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
       }}
     >
+      <ScreenTracker />
       <Tabs.Screen
         name="index"
         options={{
@@ -132,8 +147,19 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hidden tabs — accessible via stack navigation */}
-      <Tabs.Screen name="photos" options={{ href: null }} />
+      {/* Role-gated tabs — owners see Photos, technicians use Camera tab instead */}
+      <Tabs.Screen
+        name="photos"
+        options={{
+          title: t('tabs.photos', { defaultValue: 'Photos' }),
+          href: isOwner ? undefined : null,
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon focused={focused} color={color}>
+              <Ionicons name={focused ? 'images' : 'images-outline'} size={24} color={color} />
+            </AnimatedTabIcon>
+          ),
+        }}
+      />
     </Tabs>
   );
 }

@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
   ScrollView,
   ActivityIndicator,
+  Share,
 } from 'react-native';
 import PressableScale from '@/components/PressableScale';
 import { useToast } from '@/lib/useToast';
@@ -13,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/store/app';
 import { supabase } from '@/lib/supabase';
+import { useSubscription } from '@/lib/useSubscription';
 
 type TabId = 'steps' | 'tips' | 'code';
 
@@ -58,9 +60,16 @@ export default function TaskDetailScreen() {
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [activeTab, setActiveTab] = useState<TabId>('steps');
+  const [isTracking, setIsTracking] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { setActiveSession } = useAppStore();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
+  // K-153: signature capture state
+  const [jobComplete, setJobComplete] = useState(false);
+  const [signatureDone, setSignatureDone] = useState(false);
+  const { isPro } = useSubscription();
 
   useEffect(() => {
     async function fetchTask() {
@@ -97,6 +106,32 @@ export default function TaskDetailScreen() {
     fetchTask();
   }, [id]);
 
+  useEffect(() => {
+    if (isTracking) {
+      intervalRef.current = setInterval(() => {
+        setElapsed((e) => e + 1);
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isTracking]);
+
+  function formatElapsed(secs: number): string {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
+  }
+
   if (loading || !task) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#1C1C1E', alignItems: 'center', justifyContent: 'center' }}>
@@ -116,10 +151,21 @@ export default function TaskDetailScreen() {
     if (currentStep < task.steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      showToast('You finished all steps. Great work!', 'success');
-      router.back();
+      // K-153: show signature capture instead of immediately navigating back
+      showToast('Job saved', 'success');
+      setJobComplete(true);
     }
   };
+
+  // K-155: invoice generation
+  async function generateInvoice() {
+    const invoiceText = `INVOICE\n\nJob: ${task?.title}\nDate: ${new Date().toLocaleDateString()}\nStatus: Completed\n\nTotal: $${(task as any)?.price ?? '0.00'}`;
+    try {
+      await Share.share({ message: invoiceText, title: `Invoice - ${task?.title}` });
+    } catch {
+      showToast('Could not share invoice', 'error');
+    }
+  }
 
   const handleCheckMyWork = () => {
     router.push('/(tabs)/camera');
@@ -253,6 +299,103 @@ export default function TaskDetailScreen() {
       >
         {activeTab === 'steps' && (
           <>
+            {/* K-153/K-155: Job completion section — signature + invoice */}
+            {jobComplete && (
+              <>
+                {!signatureDone && (
+                  <View style={{ marginTop: 16, padding: 16, backgroundColor: '#1F2937', borderRadius: 12 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff', marginBottom: 8 }}>Customer Signature</Text>
+                    <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12 }}>
+                      Have the customer sign to confirm job completion
+                    </Text>
+                    <PressableScale
+                      haptic="medium"
+                      accessibilityRole="button"
+                      onPress={() => setSignatureDone(true)}
+                      style={{ paddingVertical: 12, borderRadius: 10, borderWidth: 2, borderColor: '#2563EB', borderStyle: 'dashed', alignItems: 'center' }}
+                    >
+                      <Text style={{ color: '#2563EB', fontWeight: '600' }}>✍ Tap to Collect Signature</Text>
+                    </PressableScale>
+                  </View>
+                )}
+
+                {signatureDone && (
+                  <>
+                    <View style={{ marginTop: 16, padding: 16, backgroundColor: '#22C55E15', borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#22C55E' }}>Signature collected</Text>
+                    </View>
+                    {/* K-155: Invoice generation (Pro gated) */}
+                    <PressableScale
+                      haptic="medium"
+                      accessibilityRole="button"
+                      onPress={() => isPro ? generateInvoice() : router.push('/(auth)/paywall' as any)}
+                      style={{ marginTop: 12, padding: 14, backgroundColor: isPro ? '#2563EB' : '#1F2937', borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+                    >
+                      <Ionicons name="document-text-outline" size={18} color={isPro ? '#fff' : '#64748B'} />
+                      <Text style={{ color: isPro ? '#fff' : '#64748B', fontWeight: '600', fontSize: 14 }}>
+                        {isPro ? 'Generate Invoice' : '🔒 Generate Invoice (Pro)'}
+                      </Text>
+                    </PressableScale>
+                    <PressableScale
+                      haptic="light"
+                      accessibilityRole="button"
+                      onPress={() => router.back()}
+                      style={{ marginTop: 12, padding: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#3A3A3C' }}
+                    >
+                      <Text style={{ color: '#8E8E93', fontWeight: '600', fontSize: 14 }}>Done</Text>
+                    </PressableScale>
+                  </>
+                )}
+              </>
+            )}
+
+            {/* On-site Timer */}
+            <View
+              style={{
+                backgroundColor: '#2C2C2E',
+                borderRadius: 16,
+                padding: 20,
+                marginBottom: 16,
+                borderWidth: 1,
+                borderColor: '#3A3A3C',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
+              <Text style={{ color: '#8E8E93', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                On-Site Timer
+              </Text>
+              <Text style={{ color: '#FFFFFF', fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: 2 }}>
+                {formatElapsed(elapsed)}
+              </Text>
+              <PressableScale
+                haptic="medium"
+                accessibilityRole="button"
+                accessibilityLabel={isTracking ? 'Pause timer' : 'Start job timer'}
+                onPress={() => setIsTracking((v) => !v)}
+                style={{
+                  paddingVertical: 12,
+                  paddingHorizontal: 32,
+                  borderRadius: 12,
+                  backgroundColor: isTracking ? '#F59E0B' : '#22C55E',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                  shadowColor: isTracking ? '#F59E0B' : '#22C55E',
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.4,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                <Ionicons name={isTracking ? 'pause' : 'play'} size={18} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700' }}>
+                  {isTracking ? 'Pause' : 'Start Job'}
+                </Text>
+              </PressableScale>
+            </View>
+
             {/* Tools Needed */}
             <View
               style={{
