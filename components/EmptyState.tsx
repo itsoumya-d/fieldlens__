@@ -56,7 +56,7 @@ export default function EmptyState({
         <Text style={[styles.compactTitle, { color: textColor }]}>{title}</Text>
         <Text style={[styles.compactDesc, { color: subColor }]}>{description}</Text>
         {actionLabel && onAction && (
-          <PressableScale onPress={onAction} style={[styles.compactBtn, { backgroundColor: primaryColor }]}>
+          <PressableScale accessibilityRole="button" onPress={onAction} style={[styles.compactBtn, { backgroundColor: primaryColor }]}>
             <Text style={styles.compactBtnText}>{actionLabel}</Text>
           </PressableScale>
         )}
@@ -74,7 +74,7 @@ export default function EmptyState({
       <Text style={[styles.title, { color: textColor }]}>{title}</Text>
       <Text style={[styles.desc, { color: subColor }]}>{description}</Text>
       {actionLabel && onAction && (
-        <PressableScale onPress={onAction} style={[styles.btn, { backgroundColor: primaryColor }]} haptic="medium">
+        <PressableScale accessibilityRole="button" onPress={onAction} style={[styles.btn, { backgroundColor: primaryColor }]} haptic="medium">
           <Text style={styles.btnText}>{actionLabel}</Text>
         </PressableScale>
       )}

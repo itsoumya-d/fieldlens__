@@ -17,7 +17,7 @@ const mockLimit = jest.fn().mockReturnThis();
 const mockInsert = jest.fn().mockResolvedValue({ data: null, error: null });
 const mockInvoke = jest.fn().mockResolvedValue({ data: null, error: null });
 
-const mockFrom = jest.fn(() => ({
+const mockFrom = jest.fn((_table: string) => ({
   select: mockSelect,
   eq: mockEq,
   not: mockNot,
@@ -34,7 +34,7 @@ mockLimit.mockReturnValue({ data: [], error: null });
 
 jest.mock('@/lib/supabase', () => ({
   supabase: {
-    from: (...args: any[]) => mockFrom(...args),
+    from: (table: string) => mockFrom(table),
     functions: {
       invoke: (...args: any[]) => mockInvoke(...args),
     },

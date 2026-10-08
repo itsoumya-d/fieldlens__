@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { isBiometricEnabled, authenticateWithBiometrics } from '@/lib/biometrics';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts } from 'expo-font';
+import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -62,10 +62,10 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [biometricLocked, setBiometricLocked] = useState(true);
   const [fontsLoaded] = useFonts({
-    'Inter-Regular': require('../assets/fonts/Inter-Regular.ttf'),
-    'Inter-Medium': require('../assets/fonts/Inter-Medium.ttf'),
-    'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
-    'Inter-Bold': require('../assets/fonts/Inter-Bold.ttf'),
+    'Inter-Regular': Inter_400Regular,
+    'Inter-Medium': Inter_500Medium,
+    'Inter-SemiBold': Inter_600SemiBold,
+    'Inter-Bold': Inter_700Bold,
   });
 
   useEffect(() => {
@@ -124,7 +124,7 @@ export default function RootLayout() {
       setUser(session?.user ?? null);
       setLoading(false);
       if (session?.user) {
-        identify(session.user.id, { email: session.user.email });
+        identify(session.user.id, session.user.email ? { email: session.user.email } : undefined);
         Purchases.logIn(session.user.id).catch(() => {});
       }
     });
@@ -134,7 +134,7 @@ export default function RootLayout() {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        identify(session.user.id, { email: session.user.email });
+        identify(session.user.id, session.user.email ? { email: session.user.email } : undefined);
         Purchases.logIn(session.user.id).catch(() => {});
       } else {
         Purchases.logOut().catch(() => {});

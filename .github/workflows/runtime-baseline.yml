@@ -1,0 +1,32 @@
+name: Runtime baseline
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPO_NO_TELEMETRY: '1'
+      # Build-only placeholders: no live project, credentials, or provider calls.
+      EXPO_PUBLIC_SUPABASE_URL: https://fieldlens-ci.invalid
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: fieldlens-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: node --version && npm --version
+      - run: npm ci
+      - run: npm ls --all
+      - run: npx expo install --check
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run export:web -- --max-workers 2

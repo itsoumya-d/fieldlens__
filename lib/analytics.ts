@@ -1,20 +1,22 @@
 import { PostHog } from 'posthog-react-native';
 
+type EventProperties = Parameters<PostHog['capture']>[1];
+
 const apiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY ?? '';
 
 export const posthog = apiKey
   ? new PostHog(apiKey, { host: 'https://us.i.posthog.com' })
   : null;
 
-export function identify(userId: string, traits?: Record<string, unknown>) {
+export function identify(userId: string, traits?: EventProperties) {
   posthog?.identify(userId, traits);
 }
 
-export function track(event: string, properties?: Record<string, unknown>) {
+export function track(event: string, properties?: EventProperties) {
   posthog?.capture(event, properties);
 }
 
-export function screen(name: string, properties?: Record<string, unknown>) {
+export function screen(name: string, properties?: EventProperties) {
   posthog?.screen(name, properties);
 }
 

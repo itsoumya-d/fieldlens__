@@ -1,6 +1,6 @@
 // Expo config plugin: adds iOS WidgetKit extension for FieldLens
 // Run `expo prebuild` to generate native files, then EAS Build will include the widget.
-const { withXcodeProject, withEntitlementsPlist, IOSConfig } = require('@expo/config-plugins');
+const { withXcodeProject, withEntitlementsPlist, IOSConfig } = require('expo/config-plugins');
 const path = require('path');
 const fs = require('fs');
 
