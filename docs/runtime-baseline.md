@@ -71,8 +71,8 @@ routing, subscription events and purchases. The app still has pre-existing produ
 and backend limitations; passing this baseline does not assert otherwise.
 
 The transcription Edge Function still names its upstream audio file `audio.m4a`
-regardless of MIME. The client now sends the actual browser/native MIME, but live
-WebM transcription has not been validated and needs a separately tested server fix.
+regardless of MIME. The native client preserves recorded Blob MIME. Any future browser adapter also
+needs a separately tested server filename/MIME fix before live WebM transcription.
 
 Install-time deprecation warnings remain in transitive tooling (including Jest 29
 and older glob/rimraf packages). Passing resolution/Doctor is not a security audit.
@@ -108,3 +108,17 @@ interaction or screenshot is claimed from that attempt.
 
 See the [separate web platform/security proposal](web-platform-proposal.md) for
 a bounded next step. It is design guidance only; none of those changes is applied.
+
+### Dependency security review is still open
+
+The first runtime CI installation on 8 October 2026 reported **68 npm dependency
+vulnerability findings: 1 critical, 52 high, 14 moderate, 1 low**. That summary
+includes the installed development/runtime tree; it is not a count of proven
+exploitable app vulnerabilities. Detailed advisory retrieval in this executor was
+blocked by its network allowlist, so production reachability and individual fixes
+have not been triaged. Do not treat green build/Doctor results as security clearance.
+Do not apply forced audit upgrades that break the Expo compatibility matrix.
+
+The initial CI run also exposed that Node 24.19.0 bundles npm 11.17.0 on the runner.
+Both workflows now explicitly install the documented npm 11.9.0 before `npm ci`;
+`packageManager`/`engines` alone do not select the npm executable.

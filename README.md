@@ -11,7 +11,8 @@ AI coaching app for tradespeople. Point your camera at your work, get AI feedbac
 
 ## Setup
 
-1. Use Node **24.19.0** (`nvm install && nvm use`) and npm **11.9.0**.
+1. Use Node **24.19.0** (`nvm install && nvm use`) and npm **11.9.0**
+   (`npm install --global npm@11.9.0`; the Node distribution may bundle a newer npm).
 2. Run `npm ci`. The committed lockfile is the reproducible baseline; do not use
    `--force` or `--legacy-peer-deps` to bypass dependency conflicts.
 3. Copy `.env.example` to `.env`. Set a sandbox Supabase URL and public anon key.

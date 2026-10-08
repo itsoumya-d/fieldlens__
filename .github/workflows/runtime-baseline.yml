@@ -23,6 +23,8 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+      - name: Pin npm to the documented version
+        run: npm install --global npm@11.9.0
       - run: node --version && npm --version
       - run: npm ci
       - run: npm ls --all
