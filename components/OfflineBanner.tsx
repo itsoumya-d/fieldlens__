@@ -7,29 +7,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { useNetworkStatus, getQueue, processQueue, QueuedOperation } from '@/lib/offline';
-import { supabase } from '@/lib/supabase';
-
-async function defaultSyncHandler(op: QueuedOperation): Promise<boolean> {
-  try {
-    if (op.type === 'create') {
-      const { error } = await supabase.from(op.table).insert(op.payload);
-      return !error;
-    }
-    if (op.type === 'update') {
-      const { id, ...data } = op.payload;
-      const { error } = await supabase.from(op.table).update(data).eq('id', id as string);
-      return !error;
-    }
-    if (op.type === 'delete') {
-      const { error } = await supabase.from(op.table).delete().eq('id', op.payload.id as string);
-      return !error;
-    }
-    return false;
-  } catch {
-    return false;
-  }
-}
+import { useNetworkStatus, getQueue, processQueue } from '@/lib/offline';
+import { syncQueuedOperation } from '@/lib/syncQueuedOperation';
 
 type SyncState = 'idle' | 'offline' | 'syncing' | 'synced' | 'pending' | 'failed';
 
@@ -83,7 +62,7 @@ export default function OfflineBanner() {
       show();
       setSyncState('syncing');
       setQueueCount(q.length);
-      const { failed } = await processQueue(defaultSyncHandler);
+      const { failed } = await processQueue(syncQueuedOperation);
       const remaining = await getQueue();
       setQueueCount(remaining.length);
       if (failed > 0) {

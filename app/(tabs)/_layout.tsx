@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Tabs, usePathname } from 'expo-router';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,8 +6,8 @@ import { useColorScheme, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import AnimatedTabIcon from '@/components/AnimatedTabIcon';
-import { useAutoSync, type QueuedOperation } from '@/lib/offline';
-import { supabase } from '@/lib/supabase';
+import { useAutoSync } from '@/lib/offline';
+import { syncQueuedOperation } from '@/lib/syncQueuedOperation';
 import { screen } from '@/lib/analytics';
 import { useAuthStore } from '@/store/auth';
 
@@ -49,14 +49,7 @@ export default function TabLayout() {
   const isDark = colorScheme === 'dark';
   const { t } = useTranslation();
 
-  const syncHandler = useCallback(async (op: QueuedOperation): Promise<boolean> => {
-    if (op.type === 'create') {
-      const { error } = await supabase.from(op.table).insert(op.payload);
-      return !error;
-    }
-    return false;
-  }, []);
-  useAutoSync(syncHandler);
+  useAutoSync(syncQueuedOperation);
 
   const user = useAuthStore(s => s.user);
   const role = (user?.user_metadata?.org_role as 'technician' | 'owner') ?? 'technician';
