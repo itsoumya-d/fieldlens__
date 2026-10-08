@@ -3,19 +3,27 @@ name: Offline queue regression tests
 on:
   pull_request:
     paths:
+      - 'app/(tabs)/_layout.tsx'
       - 'components/OfflineBanner.tsx'
       - 'lib/offline.ts'
       - 'lib/offlineQueue.ts'
+      - 'lib/offlineSync.ts'
+      - 'lib/syncQueuedOperation.ts'
       - 'tests/offline.test.mjs'
+      - 'tests/offlineSync.test.mjs'
       - 'package.json'
       - '.github/workflows/offline-queue.yml'
   push:
     branches: [main]
     paths:
+      - 'app/(tabs)/_layout.tsx'
       - 'components/OfflineBanner.tsx'
       - 'lib/offline.ts'
       - 'lib/offlineQueue.ts'
+      - 'lib/offlineSync.ts'
+      - 'lib/syncQueuedOperation.ts'
       - 'tests/offline.test.mjs'
+      - 'tests/offlineSync.test.mjs'
       - 'package.json'
       - '.github/workflows/offline-queue.yml'
 

@@ -52,3 +52,23 @@ retry count, and continues to the next snapshot entry.
   device writes, user/account queue isolation, or an Expo build.
 - Existing Jest tests under `__tests__` are separate. This focused script does not
   run or replace them. No existing check or EAS workflow is changed.
+
+## Shared request handler
+
+`tests/offlineSync.test.mjs` exercises the production dispatch factory in
+`lib/offlineSync.ts` with a fake Supabase-shaped client. `lib/syncQueuedOperation.ts`
+binds that factory once to the app's existing client; the layout reconnect hook
+and banner both import it. A source-wiring guard verifies those two imports/calls.
+
+Both entry points can send `create` (insert the complete payload), `update`
+(filter by `payload.id`, update the other fields), and `delete` (filter by
+`payload.id`). Update/delete require a nonempty string or finite numeric id.
+Provider errors, thrown requests, and invalid mutation ids return false so the
+queue retains the operation and increments its retry count.
+
+The focused tests cover all three dispatch paths, filtering, provider failures,
+persisted retries, and coalesced calls in either order. They do not execute React
+components or the actual Supabase SDK/client. A response without an error preserves
+the existing acknowledgement contract; this does not independently prove that a
+row was affected or authorized by RLS. No RLS, schema, auth, credentials, or remote
+records are changed by these tests.
