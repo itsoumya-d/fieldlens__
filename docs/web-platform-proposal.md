@@ -1,8 +1,9 @@
-# Web platform follow-on proposal (not implemented)
+# Web platform follow-on proposal
 
 The runtime baseline can export browser bundles. It does not establish a usable
-browser app. Keep the dependency PR in draft while the following decisions and
-checks remain unresolved.
+browser app. Account/startup decisions below remain unresolved. Browser recording
+ownership is now implemented as a separately tested follow-on; see
+[restoration scope and validation](web-voice-recording.md).
 
 ## Account authentication and local biometric lock
 
@@ -32,25 +33,13 @@ server-policy setting.
 
 ## Browser microphone ownership
 
-SDK 55 expo-audio has no public release mechanism for a stream acquired during a
-preparation that is subsequently cancelled or rejects before recording starts.
-Suppressing late transcripts and preventing another Start do not release that
-stream. The dependency draft fails closed before any web microphone permission or
-acquisition; both voice controls explain that browser voice is unavailable. Native
-recording remains available. Restoring browser voice is a separate incomplete feature.
+The original dependency baseline disabled browser voice because SDK 55 expo-audio
+could not publicly release a stream when preparation was cancelled or rejected
+before recording. That historical guard remains in the native fallback module.
+The separate `.web.ts` hook now routes browsers to an explicit MediaRecorder
+adapter that owns and releases acquired tracks, with a tested WebM/MP4 upload
+contract. See [browser voice recording](web-voice-recording.md) for the implemented
+scope, fake-only regressions, pending-permission limits and unvalidated behavior.
 
-A bounded follow-on option is an explicit browser recording adapter using standard
-MediaRecorder/getUserMedia APIs while retaining expo-audio on native. It must own
-the MediaStream directly, stop every track in all cancellation/failure paths, and
-never begin a cancelled recording just to make Stop legal. The adapter must reject
-unsupported MIME/recording environments with a useful message and pass the actual
-MIME/extension consistently through the server upload contract.
-
-Required deterministic tests use fake streams/recorders, never a real microphone:
-permission denial; cancellation before/after permission resolution; acquisition
-followed by preparation failure; rapid Start/Stop; constructor/start/stop errors;
-unmount/navigation; concurrent cleanup; stopped-track counts; blob URL revocation;
-late transcription suppression and repeated sessions. Browser tests with synthetic
-media can validate integration; real-device and live-provider validation stays a
-separate explicit step. No microphone/user data or live credentials are needed to
-implement these regressions.
+This recording work does not settle any account/authentication or biometric-lock
+policy decision above. Keep those protections intact in future web startup work.

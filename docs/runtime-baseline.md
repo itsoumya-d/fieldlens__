@@ -70,28 +70,22 @@ recording/transcription, camera/location, offline reconnect, notification/deep-l
 routing, subscription events and purchases. The app still has pre-existing product
 and backend limitations; passing this baseline does not assert otherwise.
 
-The transcription Edge Function still names its upstream audio file `audio.m4a`
-regardless of MIME. The native client preserves recorded Blob MIME. Any future browser adapter also
-needs a separately tested server filename/MIME fix before live WebM transcription.
+The original native-only transcription filename contract is now extended in the
+[browser voice follow-on](web-voice-recording.md), with matching WebM/MP4/M4A names
+and fake-only multipart tests. Native and live-provider behavior remain unvalidated.
 
 Install-time deprecation warnings remain in transitive tooling (including Jest 29
 and older glob/rimraf packages). Passing resolution/Doctor is not a security audit.
 Sentry's config plugin warns when its organization/project are unset; that is
 expected for provider-free checks and not evidence that native source-map upload works.
 
-### Browser voice is intentionally unavailable
+### Browser voice follow-on
 
-The SDK 55 web recorder cannot guarantee release of a stream acquired during a
-preparation that is cancelled or rejects before recording starts. This draft
-therefore **does not offer web recording**: an availability guard returns before
-any microphone permission, preparation, or recording operation. Both consumers
-show visible unavailable messaging. Repeated-start and remount tests assert that
-no recording operation is called. Native recording retains its migrated lifecycle.
-
-Browser voice remains an incomplete feature until a separately tested adapter can
-own and release its MediaStream reliably. See the [recording validation notes](../__tests__/lib/voice-recording-validation.md).
-Mocked native tests are not proof of operating-system microphone release. Do not
-present the export as a validated recording demo.
+The original SDK 55 baseline disabled browser recording because Expo's web
+preparation path could leak acquired streams. The new platform-specific web hook
+uses an explicit stream-owning MediaRecorder adapter instead. Native recording is
+unchanged. See [recording scope and validation](web-voice-recording.md); synthetic
+lifecycle tests are not proof of browser/device or provider runtime behavior.
 
 ### Existing interactive-web startup blocker
 
@@ -107,7 +101,8 @@ launch because the runtime denies its required socket operation. No browser
 interaction or screenshot is claimed from that attempt.
 
 See the [separate web platform/security proposal](web-platform-proposal.md) for
-a bounded next step. It is design guidance only; none of those changes is applied.
+a bounded next step. Its account/startup design remains unimplemented; the bounded recording portion
+is documented separately.
 
 ### Dependency security review is still open
 

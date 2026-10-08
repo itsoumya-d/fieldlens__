@@ -342,6 +342,11 @@ export default function LibraryScreen() {
               placeholderTextColor="#636366"
               style={{ flex: 1, paddingVertical: 12, fontSize: 15, color: '#FFFFFF' }}
             />
+            {(voiceActive || voiceLoading) && (
+              <PressableScale haptic="light" accessibilityRole="button" accessibilityLabel="Cancel voice search" onPress={cancelVoiceSearch}>
+                <Ionicons name="close-circle-outline" size={20} color="#E8711A" />
+              </PressableScale>
+            )}
             {search.length > 0 ? (
               <PressableScale haptic="light" accessibilityRole="button" onPress={() => setSearch('')}>
                 <Ionicons name="close-circle" size={18} color="#8E8E93" />
@@ -350,7 +355,7 @@ export default function LibraryScreen() {
               <PressableScale
                 haptic="light"
                 accessibilityRole="button"
-                accessibilityLabel={voiceBlocked ? 'Voice search unavailable on the web; use the native app' : voiceActive ? 'Stop voice search' : 'Start voice search'}
+                accessibilityLabel={voiceBlocked ? 'Voice search unavailable in this browser' : voiceActive ? 'Stop voice search' : 'Start voice search'}
                 onPress={voiceActive ? stopVoiceSearch : startVoiceSearch}
                 disabled={voiceLoading || voiceBlocked}
               >

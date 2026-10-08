@@ -3,15 +3,17 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck:voice",
     "test:unit": "jest --runInBand",
-    "test": "npm run test:offline && npm run test:unit",
+    "test": "npm run test:offline && npm run test:voice && npm run test:unit",
+    "test:voice": "node --experimental-strip-types --test tests/browserVoiceRecorder.test.mjs tests/transcriptionFormat.test.mjs",
     "export:web": "expo export --platform web",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test:offline": "node --experimental-strip-types --test tests/offline.test.mjs tests/offlineSync.test.mjs"
+    "test:offline": "node --experimental-strip-types --test tests/offline.test.mjs tests/offlineSync.test.mjs",
+    "typecheck:voice": "tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM --types node --skipLibCheck supabase/functions/transcribe-audio/transcriptionFormat.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
