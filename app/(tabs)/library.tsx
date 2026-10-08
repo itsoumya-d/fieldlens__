@@ -12,10 +12,10 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import PressableScale from '@/components/PressableScale';
 import { useToast } from '@/lib/useToast';
 import Toast from '@/components/Toast';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { WEB_VOICE_UNAVAILABLE_MESSAGE, useVoiceRecording } from '@/lib/useVoiceRecording';
 import EmptyState from '@/components/EmptyState';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/auth';
@@ -26,7 +26,6 @@ import {
   toggleGuideBookmark,
   type TaskGuideRow,
 } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
 
 type FileTypeFilter = 'all' | 'photos' | 'documents' | 'signatures';
 
@@ -80,45 +79,26 @@ export default function LibraryScreen() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [voiceRec, setVoiceRec] = useState<Audio.Recording | null>(null);
-  const [voiceActive, setVoiceActive] = useState(false);
-  const [voiceLoading, setVoiceLoading] = useState(false);
+  const {
+    recording: voiceActive,
+    busy: voiceLoading,
+    blocked: voiceBlocked,
+    start: startVoiceSearch,
+    stop: stopVoiceSearch,
+    cancel: cancelVoiceSearch,
+  } = useVoiceRecording({
+    onTranscript: (text) => setSearch(text.trim()),
+    onError: (error) => showToast(
+      error === 'unavailable' ? WEB_VOICE_UNAVAILABLE_MESSAGE :
+        error === 'permission' ? 'Microphone access needed for voice search.' :
+        error === 'start' ? 'Could not start voice search.' : 'Could not transcribe audio.',
+      'error',
+    ),
+  });
+
+  useFocusEffect(useCallback(() => () => cancelVoiceSearch(), [cancelVoiceSearch]));
 
   const PAGE_SIZE = 20;
-
-  const startVoiceSearch = async () => {
-    try {
-      const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') { showToast('Microphone access needed for voice search.', 'error'); return; }
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setVoiceRec(recording);
-      setVoiceActive(true);
-    } catch { showToast('Could not start voice search.', 'error'); }
-  };
-
-  const stopVoiceSearch = async () => {
-    if (!voiceRec) return;
-    setVoiceActive(false);
-    setVoiceLoading(true);
-    try {
-      await voiceRec.stopAndUnloadAsync();
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: false });
-      const uri = voiceRec.getURI();
-      setVoiceRec(null);
-      if (!uri) { setVoiceLoading(false); return; }
-      const resp = await fetch(uri);
-      const blob = await resp.blob();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1] ?? '');
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      const { data, error } = await supabase.functions.invoke('transcribe-audio', { body: { audioBase64: base64, mimeType: 'audio/m4a' } });
-      if (!error && data?.text) setSearch(data.text.trim());
-    } catch { } finally { setVoiceLoading(false); }
-  };
 
   const loadGuides = useCallback(async (category: Filter) => {
     setLoading(true);
@@ -354,7 +334,10 @@ export default function LibraryScreen() {
             <Ionicons name="search" size={18} color="#8E8E93" />
             <TextInput
               value={search}
-              onChangeText={setSearch}
+              onChangeText={(text) => {
+                cancelVoiceSearch();
+                setSearch(text);
+              }}
               placeholder={voiceActive ? 'Listening...' : t('library.searchTasks')}
               placeholderTextColor="#636366"
               style={{ flex: 1, paddingVertical: 12, fontSize: 15, color: '#FFFFFF' }}
@@ -367,17 +350,23 @@ export default function LibraryScreen() {
               <PressableScale
                 haptic="light"
                 accessibilityRole="button"
+                accessibilityLabel={voiceBlocked ? 'Voice search unavailable on the web; use the native app' : voiceActive ? 'Stop voice search' : 'Start voice search'}
                 onPress={voiceActive ? stopVoiceSearch : startVoiceSearch}
-                disabled={voiceLoading}
+                disabled={voiceLoading || voiceBlocked}
               >
                 {voiceLoading ? (
                   <ActivityIndicator size="small" color="#E8711A" />
                 ) : (
-                  <Ionicons name={voiceActive ? 'stop-circle' : 'mic-outline'} size={20} color={voiceActive ? '#EF4444' : '#E8711A'} />
+                  <Ionicons name={voiceBlocked ? 'warning-outline' : voiceActive ? 'stop-circle' : 'mic-outline'} size={20} color={voiceBlocked || voiceActive ? '#EF4444' : '#E8711A'} />
                 )}
               </PressableScale>
             )}
           </View>
+          {voiceBlocked && (
+            <Text accessibilityRole="alert" style={{ color: '#F9A825', fontSize: 12, marginTop: 8 }}>
+              {WEB_VOICE_UNAVAILABLE_MESSAGE}
+            </Text>
+          )}
         </View>
       </Animated.View>
 

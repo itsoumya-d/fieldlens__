@@ -43,7 +43,7 @@ export function useSubscription(): SubscriptionState {
 
     load();
 
-    const listener = Purchases.addCustomerInfoUpdateListener((info) => {
+    const listener = (info: CustomerInfo) => {
       if (!active) return;
       const proEntitlement = info.entitlements.active['pro'];
       setState(s => ({
@@ -52,11 +52,12 @@ export function useSubscription(): SubscriptionState {
         isTrial: proEntitlement?.periodType === 'TRIAL',
         customerInfo: info,
       }));
-    });
+    };
+    Purchases.addCustomerInfoUpdateListener(listener);
 
     return () => {
       active = false;
-      listener.remove();
+      Purchases.removeCustomerInfoUpdateListener(listener);
     };
   }, []);
 

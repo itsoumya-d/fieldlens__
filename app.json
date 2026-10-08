@@ -59,7 +59,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
@@ -75,7 +75,6 @@
       "@sentry/react-native/expo",
       "./plugins/withWidget"
     ],
-    "jsEngine": "hermes",
     "experiments": {
       "typedRoutes": true
     }

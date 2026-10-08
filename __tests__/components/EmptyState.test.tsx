@@ -1,19 +1,19 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { renderAsync, fireEvent } from '@testing-library/react-native';
 import EmptyState from '@/components/EmptyState';
 
 describe('fieldlens/components/EmptyState', () => {
-  it('should render title and description', () => {
-    const { getByText } = render(
+  it('should render title and description', async () => {
+    const { getByText } = await renderAsync(
       <EmptyState title="No Tasks" description="Complete your first field task to get started" />
     );
     expect(getByText('No Tasks')).toBeTruthy();
     expect(getByText('Complete your first field task to get started')).toBeTruthy();
   });
 
-  it('should render action button when actionLabel and onAction are provided', () => {
+  it('should render action button when actionLabel and onAction are provided', async () => {
     const onAction = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await renderAsync(
       <EmptyState
         title="No Tasks"
         description="Start your training journey"
@@ -25,16 +25,16 @@ describe('fieldlens/components/EmptyState', () => {
     expect(button).toBeTruthy();
   });
 
-  it('should not render action button when actionLabel is missing', () => {
-    const { queryByText } = render(
+  it('should not render action button when actionLabel is missing', async () => {
+    const { queryByText } = await renderAsync(
       <EmptyState title="No Tasks" description="No tasks available" />
     );
     expect(queryByText('Browse Tasks')).toBeNull();
   });
 
-  it('should call onAction when action button is pressed', () => {
+  it('should call onAction when action button is pressed', async () => {
     const onAction = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await renderAsync(
       <EmptyState
         title="No Tasks"
         description="Start your training journey"
@@ -46,9 +46,9 @@ describe('fieldlens/components/EmptyState', () => {
     expect(onAction).toHaveBeenCalledTimes(1);
   });
 
-  it('should have correct accessibility attributes on action button', () => {
+  it('should have correct accessibility attributes on action button', async () => {
     const onAction = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await renderAsync(
       <EmptyState
         title="Empty"
         description="Nothing here"
