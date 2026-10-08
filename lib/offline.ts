@@ -1,6 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createOfflineQueue, type QueuedOperation } from './offlineQueue';
+
+export type { QueuedOperation } from './offlineQueue';
 
 // ── Network status ────────────────────────────────────────────────
 export async function isOnline(): Promise<boolean> {
@@ -34,101 +37,15 @@ export function useNetworkStatus() {
 }
 
 // ── Offline Queue ─────────────────────────────────────────────────
-const QUEUE_KEY = '@offline_sync_queue';
-
-export interface QueuedOperation {
-  id: string;
-  type: 'create' | 'update' | 'delete';
-  table: string;
-  payload: Record<string, unknown>;
-  createdAt: string;
-  retries: number;
-}
-
-/**
- * Add an operation to the offline sync queue.
- * Operations are persisted in AsyncStorage and synced when connectivity returns.
- */
-export async function enqueueOperation(
-  type: QueuedOperation['type'],
-  table: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  const queue = await getQueue();
-  const operation: QueuedOperation = {
-    id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    type,
-    table,
-    payload,
-    createdAt: new Date().toISOString(),
-    retries: 0,
-  };
-  queue.push(operation);
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-}
-
-/** Get all pending operations from the queue. */
-export async function getQueue(): Promise<QueuedOperation[]> {
-  try {
-    const raw = await AsyncStorage.getItem(QUEUE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-/** Remove a specific operation from the queue after successful sync. */
-export async function dequeueOperation(id: string): Promise<void> {
-  const queue = await getQueue();
-  const updated = queue.filter((op) => op.id !== id);
-  await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(updated));
-}
-
-/** Clear entire queue (use after full sync). */
-export async function clearQueue(): Promise<void> {
-  await AsyncStorage.removeItem(QUEUE_KEY);
-}
-
-/**
- * Process the offline sync queue.
- * Pass a sync handler that performs the actual API call per operation.
- * Returns { synced: number, failed: number }.
- */
-export async function processQueue(
-  syncHandler: (op: QueuedOperation) => Promise<boolean>
-): Promise<{ synced: number; failed: number }> {
-  const online = await isOnline();
-  if (!online) return { synced: 0, failed: 0 };
-
-  const queue = await getQueue();
-  let synced = 0;
-  let failed = 0;
-
-  for (const op of queue) {
-    try {
-      const success = await syncHandler(op);
-      if (success) {
-        await dequeueOperation(op.id);
-        synced++;
-      } else {
-        // Increment retry count
-        op.retries++;
-        failed++;
-      }
-    } catch {
-      op.retries++;
-      failed++;
-    }
-  }
-
-  // Save updated retry counts for failed operations
-  if (failed > 0) {
-    const remaining = await getQueue();
-    await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
-  }
-
-  return { synced, failed };
-}
+// All callers in this JS runtime share one mutation lock and one sync pass.
+// AsyncStorage itself does not provide a cross-tab/process transaction here.
+export const {
+  enqueueOperation,
+  getQueue,
+  dequeueOperation,
+  clearQueue,
+  processQueue,
+} = createOfflineQueue(AsyncStorage, isOnline);
 
 // ── Local Cache ───────────────────────────────────────────────────
 const CACHE_PREFIX = '@cache_';
@@ -249,6 +166,7 @@ export function useAutoSync(
   const wasOfflineRef = useRef(false);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!isConnected) {
@@ -260,9 +178,13 @@ export function useAutoSync(
     if (wasOfflineRef.current && isConnected) {
       wasOfflineRef.current = false;
       setSyncing(true);
+      setError(null);
       processQueue(syncHandler)
         .then(() => {
           setLastSync(new Date());
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof Error ? err : new Error('Offline sync failed'));
         })
         .finally(() => {
           setSyncing(false);
@@ -270,5 +192,5 @@ export function useAutoSync(
     }
   }, [isConnected, syncHandler]);
 
-  return { syncing, lastSync };
+  return { syncing, lastSync, error };
 }

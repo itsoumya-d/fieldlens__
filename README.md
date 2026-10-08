@@ -16,3 +16,8 @@ AI coaching app for tradespeople. Point your camera at your work, get real-time 
 
 ## Documentation
 See `saas-docs/` for full product documentation.
+
+## Offline queue regression checks
+Run `npm run test:offline` with Node.js 24; this focused suite needs no app
+installation or provider credentials. See [tests/README.md](tests/README.md) for
+coverage, failure semantics, and the same-runtime / possible-repeat-delivery limitations.
