@@ -31,12 +31,13 @@ async function defaultSyncHandler(op: QueuedOperation): Promise<boolean> {
   }
 }
 
-type SyncState = 'idle' | 'offline' | 'syncing' | 'synced' | 'failed';
+type SyncState = 'idle' | 'offline' | 'syncing' | 'synced' | 'pending' | 'failed';
 
 const STATE_CONFIG: Record<Exclude<SyncState, 'idle'>, { bg: string; icon: string; color: string }> = {
   offline: { bg: '#1E293B', icon: 'cloud-offline-outline', color: '#94A3B8' },
   syncing: { bg: '#1E3A5F', icon: 'sync-outline', color: '#60A5FA' },
   synced:  { bg: '#14532D', icon: 'checkmark-circle-outline', color: '#4ADE80' },
+  pending: { bg: '#1E3A5F', icon: 'cloud-upload-outline', color: '#60A5FA' },
   failed:  { bg: '#7F1D1D', icon: 'warning-outline', color: '#FCA5A5' },
 };
 
@@ -45,43 +46,75 @@ export default function OfflineBanner() {
   const [queueCount, setQueueCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
   const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [syncError, setSyncError] = useState<string | null>(null);
   const translateY = useSharedValue(-52);
   const wasOfflineRef = useRef(false);
   const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideCompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const show = () => {
+    if (hideCompleteTimer.current) clearTimeout(hideCompleteTimer.current);
+    hideCompleteTimer.current = null;
     translateY.value = withSpring(0, { damping: 18, stiffness: 250 });
   };
 
   const hide = () => {
     translateY.value = withTiming(-52, { duration: 400 });
-    setTimeout(() => setSyncState('idle'), 420);
+    if (hideCompleteTimer.current) clearTimeout(hideCompleteTimer.current);
+    hideCompleteTimer.current = setTimeout(() => {
+      hideCompleteTimer.current = null;
+      setSyncState('idle');
+    }, 420);
+  };
+
+  const handleQueueError = () => {
+    if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
+    setSyncError("Couldn't read or save pending changes. Try again.");
+    setSyncState('failed');
+    show();
   };
 
   const runSync = async () => {
-    const q = await getQueue();
-    if (q.length === 0) { hide(); return; }
-    setSyncState('syncing');
-    setQueueCount(q.length);
-    const { synced, failed } = await processQueue(defaultSyncHandler);
-    const remaining = await getQueue();
-    setQueueCount(remaining.length);
-    if (failed > 0) {
-      setFailedCount(failed);
-      setSyncState('failed');
-    } else {
-      setSyncState('synced');
-      autoHideTimer.current = setTimeout(hide, 2200);
+    if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
+    setSyncError(null);
+    try {
+      const q = await getQueue();
+      if (q.length === 0) { hide(); return; }
+      show();
+      setSyncState('syncing');
+      setQueueCount(q.length);
+      const { failed } = await processQueue(defaultSyncHandler);
+      const remaining = await getQueue();
+      setQueueCount(remaining.length);
+      if (failed > 0) {
+        setFailedCount(failed);
+        setSyncState('failed');
+      } else if (remaining.length > 0) {
+        setSyncState('pending');
+      } else {
+        setSyncState('synced');
+        autoHideTimer.current = setTimeout(hide, 2200);
+      }
+    } catch {
+      handleQueueError();
     }
   };
 
   // Poll queue count every 5s so the banner reflects changes
   useEffect(() => {
     const interval = setInterval(async () => {
-      const q = await getQueue();
-      setQueueCount(q.length);
+      try {
+        const q = await getQueue();
+        setQueueCount(q.length);
+      } catch {
+        handleQueueError();
+      }
     }, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
+      if (hideCompleteTimer.current) clearTimeout(hideCompleteTimer.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -90,7 +123,7 @@ export default function OfflineBanner() {
     if (!isConnected) {
       wasOfflineRef.current = true;
       setSyncState('offline');
-      getQueue().then(q => setQueueCount(q.length));
+      getQueue().then(q => setQueueCount(q.length)).catch(handleQueueError);
       show();
       return;
     }
@@ -117,7 +150,8 @@ export default function OfflineBanner() {
     syncState === 'offline' ? (queueCount > 0 ? `Offline · ${queueCount} pending` : 'No connection') :
     syncState === 'syncing' ? `Syncing ${queueCount} change${queueCount !== 1 ? 's' : ''}…` :
     syncState === 'synced'  ? 'All changes saved' :
-    `${failedCount} change${failedCount !== 1 ? 's' : ''} failed to sync`;
+    syncState === 'pending' ? `${queueCount} change${queueCount !== 1 ? 's' : ''} pending` :
+    syncError ?? `${failedCount} change${failedCount !== 1 ? 's' : ''} failed to sync`;
 
   return (
     <Animated.View style={[
@@ -131,12 +165,12 @@ export default function OfflineBanner() {
     ]}>
       <Ionicons name={cfg.icon as any} size={15} color={cfg.color} />
       <Text style={{ color: cfg.color, fontWeight: '600', fontSize: 12 }}>{label}</Text>
-      {syncState === 'failed' && (
+      {(syncState === 'failed' || syncState === 'pending') && (
         <Pressable
           onPress={handleRetry}
           style={{ marginLeft: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}
         >
-          <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '700' }}>Retry</Text>
+          <Text style={{ color: '#FCA5A5', fontSize: 11, fontWeight: '700' }}>{syncState === 'pending' ? 'Sync' : 'Retry'}</Text>
         </Pressable>
       )}
     </Animated.View>

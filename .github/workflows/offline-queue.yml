@@ -1,0 +1,36 @@
+name: Offline queue regression tests
+
+on:
+  pull_request:
+    paths:
+      - 'components/OfflineBanner.tsx'
+      - 'lib/offline.ts'
+      - 'lib/offlineQueue.ts'
+      - 'tests/offline.test.mjs'
+      - 'package.json'
+      - '.github/workflows/offline-queue.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'components/OfflineBanner.tsx'
+      - 'lib/offline.ts'
+      - 'lib/offlineQueue.ts'
+      - 'tests/offline.test.mjs'
+      - 'package.json'
+      - '.github/workflows/offline-queue.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-queue:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # The storage-only suite uses Node built-ins and needs no app dependencies,
+      # Expo account, provider credentials, simulator, or network connection.
+      - run: npm run test:offline
