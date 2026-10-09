@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createTranscriptionFormData, TranscriptionInputError } from "./transcriptionFormat.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,17 +11,13 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
   try {
-    const { audioBase64, mimeType = "audio/m4a" } = await req.json();
-    if (!audioBase64) {
-      return new Response(JSON.stringify({ error: "audioBase64 is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let input: unknown;
+    try {
+      input = await req.json();
+    } catch {
+      throw new TranscriptionInputError("Request body must be valid JSON");
     }
-    const audioBytes = Uint8Array.from(atob(audioBase64), (c) => c.charCodeAt(0));
-    const formData = new FormData();
-    formData.append("file", new Blob([audioBytes], { type: mimeType }), "audio.m4a");
-    formData.append("model", "whisper-1");
+    const formData = createTranscriptionFormData(input);
     const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: { Authorization: `Bearer ${Deno.env.get("OPENAI_API_KEY")}` },
@@ -38,8 +35,9 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
+    const invalidInput = err instanceof TranscriptionInputError;
+    return new Response(JSON.stringify({ error: invalidInput ? err.message : String(err) }), {
+      status: invalidInput ? 400 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

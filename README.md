@@ -32,9 +32,9 @@ npm run export:web -- --max-workers 2
 ```
 
 `npm test` runs both the provider-free Node offline queue suite and Jest's
-mocked component/library tests. TypeScript checks app and test source, while
-Supabase Edge Functions use a separate Deno runtime and are not covered by this
-app compiler. No lint configuration currently exists.
+mocked component/library tests. TypeScript checks app and test source.
+The pure transcription-format helper also has a focused typecheck. Supabase Edge
+Function entrypoints use a separate Deno runtime and are not covered by the app compiler. No lint configuration currently exists.
 
 For a **build-only check without a backend**, use the non-routable placeholders:
 
@@ -46,8 +46,9 @@ npm run export:web -- --max-workers 2
 
 These values only allow bundling/static rendering. They do not make auth,
 database queries, AI, uploads or purchases work. An export is not a device test
-or a production-ready demo. Web voice input is intentionally unavailable until its
-stream cleanup can be guaranteed; native recording still needs device validation. See [runtime verification](docs/runtime-baseline.md)
+or a production-ready demo. Browser voice now has a stream-owning MediaRecorder adapter and provider-free
+regression tests. The existing web startup lock is still unresolved; browser/device
+and live transcription validation remain outstanding. See [browser voice](docs/web-voice-recording.md). See [runtime verification](docs/runtime-baseline.md)
 for coverage and remaining limits.
 
 ## Documentation
